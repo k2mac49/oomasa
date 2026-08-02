@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="レジ">
@@ -17,248 +17,253 @@
     --warn:#ef4444; --blue:#38bdf8; --key:#334155; --keyactive:#475569;
     --hz1:#f5c400; --hz2:#111;
   }
-  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
-  html,body{margin:0; height:100%;}
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; margin:0;}
+  html,body{height:100%;}
   body{
     background:var(--bg); color:var(--txt);
     font-family:-apple-system,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
-    display:flex; flex-direction:column; height:100vh; overflow:hidden;
+    display:flex; flex-direction:column; height:100vh; height:100dvh; overflow:hidden;
     padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   }
-  .bar{display:flex; align-items:center; gap:10px; padding:8px 14px; flex-wrap:wrap;
-    background:var(--panel); border-bottom:1px solid var(--line);}
-  .bar .field{display:flex; align-items:center; gap:6px;}
-  .bar label{font-size:12px; color:var(--sub); white-space:nowrap;}
-  .bar input{background:var(--bg); color:var(--txt); border:1px solid var(--line);
-    border-radius:8px; padding:7px 10px; font-size:15px; font-family:inherit;}
-  .bar input#ev{min-width:150px; flex:1;}
-  .bar .now{margin-left:auto; font-size:13px; color:var(--sub);}
 
-  .tabs{display:flex; align-items:center; gap:6px; padding:8px 14px 0; border-bottom:1px solid var(--line);}
-  .tab{border:0; background:transparent; color:var(--sub); font-size:16px; font-weight:700;
-    padding:11px 20px; cursor:pointer; border-radius:12px 12px 0 0;}
-  .tab.active{color:var(--txt); background:var(--panel);}
+  /* タブ（メニュー） */
+  .tabs{display:flex; gap:6px; padding:6px 10px; border-bottom:1px solid var(--line); background:var(--panel);}
+  .tab{flex:1; border:0; background:transparent; color:var(--sub); font-size:15px; font-weight:700;
+    padding:9px 0; cursor:pointer; border-radius:10px;}
+  .tab.active{color:var(--txt); background:var(--panel2);}
   .tab .dot{color:var(--accent); font-weight:800;}
-  .discbtn{margin-left:auto; margin-bottom:6px; border:1px solid var(--line); background:var(--bg);
-    color:var(--txt); font-size:15px; font-weight:800; padding:9px 16px; border-radius:10px; cursor:pointer;
-    display:flex; align-items:center; gap:8px;}
+
+  .page{flex:1; min-height:0; display:none;}
+  .page.active{display:flex; flex-direction:column;}
+
+  /* ===== レジ：商品／電卓 の横スワイプ ===== */
+  .swiper{flex:1; min-height:0; display:flex; overflow-x:auto; overflow-y:hidden;
+    scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; scrollbar-width:none;}
+  .swiper::-webkit-scrollbar{display:none;}
+  .slide{flex:0 0 100%; width:100%; height:100%; scroll-snap-align:start; scroll-snap-stop:always;
+    display:flex; flex-direction:column; min-height:0; padding:8px;}
+
+  /* 商品ページ */
+  .prodhead{position:sticky; top:0; z-index:3; display:flex; align-items:center; gap:10px; padding:8px 10px; margin-bottom:8px;
+    background:var(--panel); border:1px solid var(--line); border-radius:12px;}
+  .prodhead .ttl{flex:1; display:flex; align-items:baseline; gap:8px;}
+  .prodhead .ttl .lbl{font-size:13px; color:var(--sub);}
+  .prodhead .ttl .val{font-size:30px; font-weight:900; line-height:1;}
+  #pageRegister.disc .prodhead .ttl .val{color:var(--warn);}
+  .discbtn{border:1px solid var(--line); background:var(--bg); color:var(--txt);
+    font-size:14px; font-weight:800; padding:8px 12px; border-radius:10px; cursor:pointer; white-space:nowrap;}
   .discbtn:active{transform:scale(.97);}
   .discbtn.on{color:var(--hz2); border-color:var(--hz1);
-    background:repeating-linear-gradient(45deg,var(--hz1) 0 12px,var(--hz2) 12px 24px);
+    background:repeating-linear-gradient(45deg,var(--hz1) 0 10px,var(--hz2) 10px 20px);
     animation:blink 1.1s steps(1,end) infinite;}
-  .discbtn.on .txt{background:var(--hz2); color:var(--hz1); padding:3px 10px; border-radius:6px;}
+  .discbtn.on .txt{background:var(--hz2); color:var(--hz1); padding:2px 8px; border-radius:6px;}
   @keyframes blink{50%{filter:brightness(.72);}}
 
-  .page{flex:1; overflow:hidden; display:none; min-height:0;}
-  .page.active{display:flex;}
-
-  #pageRegister{flex-direction:row; gap:14px; padding:14px; min-height:0;}
-  .left{flex:1; min-width:0; display:flex; flex-direction:column; gap:12px; min-height:0;}
-  .hazbanner{display:none;}
-  #pageRegister.disc .hazbanner{
-    display:flex; align-items:center; justify-content:center; gap:12px; flex-wrap:wrap;
-    padding:12px 14px; border-radius:14px; border:2px solid var(--hz1);
-    background:repeating-linear-gradient(45deg,var(--hz1) 0 18px,var(--hz2) 18px 36px);
-    animation:blink 1.1s steps(1,end) infinite;}
-  .hazbanner .lbl{background:var(--hz2); color:var(--hz1); padding:6px 16px; border-radius:8px;
-    font-weight:900; font-size:16px; letter-spacing:1px;}
-  .hazbanner .amt{background:var(--warn); color:#fff; padding:6px 14px; border-radius:8px; font-weight:900; font-size:15px;}
-
-  .products{flex:1; background:var(--panel); border:2px solid var(--line); border-radius:16px;
-    padding:14px; overflow-y:auto; display:flex; flex-direction:column; gap:12px; min-width:0;}
-  #pageRegister.disc .products{border-color:var(--warn);}
-  .product{display:flex; align-items:center; justify-content:space-between; gap:14px;
-    background:var(--bg); border:1px solid var(--line); border-radius:14px; padding:14px 16px;}
-  .product.on{border-color:var(--warn);}
-  .product .name{font-size:22px; font-weight:800; line-height:1.1;}
-  .product .price{font-size:14px; color:var(--sub); margin-top:4px;}
-  .product .price s{color:#64748b; margin-right:6px;}
-  .product .price .now{color:var(--warn); font-weight:800; font-size:16px;}
-  .ctrl{display:flex; align-items:center; gap:12px;}
-  .ctrl .line{font-size:13px; color:var(--sub); text-align:right; min-width:72px;}
-  .ctrl .line b{display:block; font-size:16px; color:var(--txt); font-weight:800;}
-  .ctrl button{width:52px; height:52px; border:1px solid var(--line); background:var(--panel2);
-    color:var(--txt); font-size:28px; border-radius:14px; cursor:pointer; line-height:1;}
-  .ctrl button:active{background:var(--keyactive); transform:scale(.95);}
+  .products{flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:8px;}
+  .product{display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:8px 12px;}
+  #pageRegister.disc .product.on{border-color:var(--warn);}
+  .product .info{min-width:0;}
+  .product .name{font-size:19px; font-weight:800; line-height:1.15;}
+  .product .price{font-size:13px; color:var(--sub); line-height:1.2; margin-top:1px;}
+  .product .price s{color:#64748b; margin-right:5px;}
+  .product .price .now{color:var(--warn); font-weight:800;}
+  .ctrl{display:flex; align-items:center; gap:8px;}
+  .ctrl .sub{font-size:14px; font-weight:800; min-width:56px; text-align:right;}
+  .ctrl button{width:48px; height:48px; border:1px solid var(--line); background:var(--panel2);
+    color:var(--txt); font-size:26px; border-radius:12px; cursor:pointer; line-height:1;}
+  .ctrl button:active{background:var(--keyactive); transform:scale(.94);}
   .ctrl .plus{background:var(--accent2); border-color:var(--accent2); color:#052e16; font-weight:900;}
-  .ctrl .count{min-width:44px; text-align:center; font-size:26px; font-weight:800;}
-  .ctrl button:disabled{opacity:.35; cursor:default;}
+  .ctrl .count{min-width:34px; text-align:center; font-size:24px; font-weight:800;}
+  .ctrl button:disabled{opacity:.35;}
 
-  /* 電卓（右）：値引きコーナーなし。合計/預り/おつりのみ。geometry固定 */
-  .register{width:370px; flex:none; background:var(--panel); border:2px solid var(--line);
-    border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:10px; overflow-y:auto;}
-  #pageRegister.disc .register{border-color:var(--hz1);}
-  .totalbox{display:flex; justify-content:space-between; align-items:baseline; padding:8px 12px; border-radius:12px;}
-  .totalbox .lbl{font-size:15px; color:var(--sub);}
-  .totalbox .val{font-size:34px; font-weight:900;}
-  #pageRegister.disc .totalbox .val{color:var(--warn);}
-  .payline{display:flex; justify-content:space-between; align-items:baseline; padding:0 2px;}
-  .payline .lbl{font-size:14px; color:var(--sub);}
-  .payline .val{font-size:20px; font-weight:700; color:var(--blue);}
-  .changebox{display:flex; justify-content:space-between; align-items:baseline;
-    background:var(--panel2); border-radius:12px; padding:10px 14px;}
-  .changebox .lbl{font-size:16px; font-weight:700;}
-  .changebox .val{font-size:30px; font-weight:900; color:var(--accent);}
+  /* 電卓ページ（スクロールなしで収める） */
+  .calc{flex:1; min-height:0; display:flex; flex-direction:column; gap:7px;}
+  .crow{display:flex; align-items:baseline; justify-content:space-between; padding:0 4px;}
+  .crow .lbl{font-size:13px; color:var(--sub);}
+  .crow .val{font-size:20px; font-weight:800;}
+  .crow.total .val{font-size:30px; font-weight:900;}
+  #pageRegister.disc .crow.total .val{color:var(--warn);}
+  .crow.total .val.recv{color:var(--blue);}
+  .changebox{display:flex; align-items:baseline; justify-content:space-between;
+    background:var(--panel2); border-radius:10px; padding:7px 12px;}
+  .changebox .lbl{font-size:14px; font-weight:700;}
+  .changebox .val{font-size:26px; font-weight:900; color:var(--accent);}
   .changebox.short .val{color:var(--warn);}
-  .quick{display:grid; grid-template-columns:repeat(3,1fr); gap:8px;}
-  .quick button{height:42px; font-size:15px; font-weight:700; border:1px solid var(--line);
-    background:var(--bg); color:var(--txt); border-radius:10px; cursor:pointer;}
+  .quick{display:grid; grid-template-columns:repeat(3,1fr); gap:6px;}
+  .quick button{height:38px; font-size:14px; font-weight:700; border:1px solid var(--line);
+    background:var(--bg); color:var(--txt); border-radius:9px; cursor:pointer;}
   .quick button:active{background:var(--panel2);}
-  .keypad{display:grid; grid-template-columns:repeat(3,1fr); gap:8px;}
-  .keypad button{height:54px; font-size:22px; font-weight:700; border:1px solid var(--line);
-    background:var(--key); color:var(--txt); border-radius:12px; cursor:pointer;}
+  .keypad{flex:1; min-height:0; display:grid; grid-template-columns:repeat(3,1fr);
+    grid-auto-rows:1fr; gap:6px;}
+  .keypad button{font-size:22px; font-weight:700; border:1px solid var(--line);
+    background:var(--key); color:var(--txt); border-radius:11px; cursor:pointer;}
   .keypad button:active{background:var(--keyactive); transform:scale(.97);}
-  .keypad .fn{background:#475569; font-size:16px;}
+  .keypad .fn{background:#475569; font-size:15px;}
   .keypad .clr{color:var(--warn);}
-  .actions{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:2px;}
-  .actions button{height:52px; border:0; border-radius:12px; font-size:16px; font-weight:800; cursor:pointer;}
+  .actions{display:grid; grid-template-columns:1fr 1.3fr; gap:6px;}
+  .actions button{height:50px; border:0; border-radius:11px; font-size:16px; font-weight:800; cursor:pointer;}
   .btn-clear{background:var(--panel2); color:var(--txt);}
   .btn-pay{background:var(--accent); color:#052e16;}
-  .btn-pay:disabled{opacity:.4; cursor:not-allowed;}
+  .btn-pay:disabled{opacity:.4;}
   .actions button:active{transform:scale(.98);}
 
-  /* 売上画面 */
-  #pageSales{flex-direction:column; padding:14px; gap:14px; overflow-y:auto;}
-  .grand{display:flex; gap:14px; flex-wrap:wrap; align-items:stretch;}
-  .card{background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:14px 20px;}
-  .card .lbl{font-size:13px; color:var(--sub);}
-  .card .big{font-size:32px; font-weight:900; margin-top:4px;}
+  /* スワイプ切替インジケータ */
+  .segs{display:flex; gap:6px; padding:6px 10px; }
+  .seg{flex:1; text-align:center; padding:8px 0; font-size:14px; font-weight:800;
+    border:1px solid var(--line); background:var(--panel); color:var(--sub); border-radius:10px; cursor:pointer;}
+  .seg.active{background:var(--panel2); color:var(--txt); border-color:var(--accent);}
+
+  /* ===== 売上ページ ===== */
+  #pageSales{overflow-y:auto; padding:10px; gap:10px;}
+  .setrow{display:flex; gap:8px; flex-wrap:wrap; background:var(--panel); border:1px solid var(--line);
+    border-radius:12px; padding:10px;}
+  .setrow .f{display:flex; align-items:center; gap:6px;}
+  .setrow label{font-size:12px; color:var(--sub); white-space:nowrap;}
+  .setrow input{background:var(--bg); color:var(--txt); border:1px solid var(--line);
+    border-radius:8px; padding:8px 10px; font-size:15px; font-family:inherit;}
+  .setrow input#ev{flex:1; min-width:120px;}
+  .grand{display:flex; gap:10px; flex-wrap:wrap;}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px 14px; flex:1; min-width:90px;}
+  .card .lbl{font-size:12px; color:var(--sub);}
+  .card .big{font-size:24px; font-weight:900; margin-top:2px;}
   .card.total .big{color:var(--accent);}
-  .card.act{display:flex; flex-direction:column; gap:8px; justify-content:center;}
-  .btn-export{background:var(--blue); color:#052e16; border:0; border-radius:10px;
-    padding:11px 16px; font-size:15px; font-weight:800; cursor:pointer; white-space:nowrap;}
-  .btn-export:active{transform:scale(.98);}
+  .act{display:flex; gap:8px; flex-wrap:wrap;}
+  .btn-export{flex:1; background:var(--blue); color:#052e16; border:0; border-radius:10px;
+    padding:12px; font-size:15px; font-weight:800; cursor:pointer;}
   .danger{background:transparent; border:1px solid var(--warn); color:var(--warn);
-    border-radius:10px; padding:9px 16px; font-size:13px; font-weight:700; cursor:pointer;}
-  .daygroup{background:var(--panel); border:1px solid var(--line); border-radius:16px; overflow:hidden;}
-  .dayhead{display:flex; align-items:baseline; gap:12px; padding:14px 16px; background:var(--panel2); flex-wrap:wrap;}
-  .dayhead .date{font-size:17px; font-weight:800;}
-  .dayhead .ev{font-size:14px; color:var(--blue); font-weight:700;}
-  .dayhead .sum{margin-left:auto; font-size:20px; font-weight:900; color:var(--accent);}
-  .dayhead .meta{font-size:12px; color:var(--sub); width:100%;}
+    border-radius:10px; padding:11px 14px; font-size:13px; font-weight:700; cursor:pointer;}
+  .daygroup{background:var(--panel); border:1px solid var(--line); border-radius:12px; overflow:hidden;}
+  .dayhead{display:flex; align-items:baseline; gap:10px; padding:11px 12px; background:var(--panel2); flex-wrap:wrap;}
+  .dayhead .date{font-size:15px; font-weight:800;}
+  .dayhead .ev{font-size:13px; color:var(--blue); font-weight:700;}
+  .dayhead .sum{margin-left:auto; font-size:18px; font-weight:900; color:var(--accent);}
+  .dayhead .meta{font-size:11px; color:var(--sub); width:100%;}
   .dayhead .meta .dsc{color:var(--warn); font-weight:700;}
-  .daybody{padding:14px 16px; display:flex; gap:18px; flex-wrap:wrap;}
-  .byitem{flex:1; min-width:240px;}
-  .byitem h4,.txns h4{margin:0 0 8px; font-size:14px; color:var(--sub);}
+  .daybody{padding:11px 12px; display:flex; gap:14px; flex-wrap:wrap;}
+  .byitem{flex:1; min-width:200px;}
+  .byitem h4,.txns h4{margin:0 0 6px; font-size:13px; color:var(--sub);}
   .byitem table{width:100%; border-collapse:collapse;}
-  .byitem td{padding:7px 4px; border-bottom:1px solid var(--line); font-size:15px;}
+  .byitem td{padding:6px 3px; border-bottom:1px solid var(--line); font-size:14px;}
   .byitem td:last-child{text-align:right; font-weight:800;}
   .byitem td .cnt{color:var(--blue); font-weight:800;}
-  .byitem td .dc{color:var(--warn); font-size:12px; font-weight:700; margin-left:6px;}
-  .txns{flex:1; min-width:240px;}
-  .txn{border:1px solid var(--line); border-radius:10px; padding:9px 12px; margin-bottom:8px; background:var(--bg);}
+  .byitem td .dc{color:var(--warn); font-size:11px; font-weight:700; margin-left:5px;}
+  .txns{flex:1; min-width:200px;}
+  .txn{border:1px solid var(--line); border-radius:9px; padding:8px 10px; margin-bottom:7px; background:var(--bg);}
   .txn.d{border-color:var(--warn);}
   .txn .h{display:flex; justify-content:space-between; align-items:baseline;}
-  .txn .no{font-weight:800; font-size:14px;}
+  .txn .no{font-weight:800; font-size:13px;}
   .txn .time{color:var(--sub); font-size:11px;}
-  .txn .amt{font-weight:900; font-size:16px;}
-  .txn .lines{color:var(--sub); font-size:13px; margin-top:3px;}
-  .txn .drow{margin-top:5px; font-size:12px; color:var(--warn); font-weight:700;}
-  .empty{color:var(--sub); text-align:center; padding:30px 0;}
+  .txn .amt{font-weight:900; font-size:15px;}
+  .txn .lines{color:var(--sub); font-size:12px; margin-top:2px;}
+  .txn .drow{margin-top:4px; font-size:11px; color:var(--warn); font-weight:700;}
+  .empty{color:var(--sub); text-align:center; padding:26px 0;}
 
-  /* 値引き設定モーダル（商品ごと）*/
+  /* 値引きモーダル */
   .modal-bg{display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:20;
-    align-items:center; justify-content:center; padding:16px;}
+    align-items:center; justify-content:center; padding:14px;}
   .modal-bg.on{display:flex;}
-  .modal{background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:20px;
-    width:100%; max-width:440px; max-height:90vh; overflow-y:auto; display:flex; flex-direction:column; gap:12px;}
-  .modal h3{margin:0; font-size:18px;}
-  .modal p{margin:0; font-size:13px; color:var(--sub); line-height:1.6;}
-  .prow{border:2px solid var(--line); border-radius:12px; padding:12px 14px;
-    display:flex; flex-direction:column; align-items:stretch; gap:10px;}
+  .modal{background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:16px;
+    width:100%; max-width:440px; max-height:90vh; overflow-y:auto; display:flex; flex-direction:column; gap:10px;}
+  .modal h3{font-size:17px;}
+  .modal p{font-size:12px; color:var(--sub); line-height:1.5;}
+  .prow{border:2px solid var(--line); border-radius:11px; padding:10px 12px;
+    display:flex; flex-direction:column; align-items:stretch; gap:9px;}
   .prow.sel{border-color:var(--hz1); background:rgba(245,196,0,.08);}
-  .prow .pn{font-size:16px; font-weight:800;}
-  .prow .pc{display:flex; align-items:center; gap:8px;}
-  .prow .pc button{height:44px; min-width:52px; padding:0 8px; border:1px solid var(--line); background:var(--bg);
+  .prow .pn{font-size:15px; font-weight:800;}
+  .prow .pc{display:flex; align-items:center; gap:7px;}
+  .prow .pc button{height:42px; min-width:50px; padding:0 8px; border:1px solid var(--line); background:var(--bg);
     color:var(--txt); font-size:14px; font-weight:800; border-radius:10px; cursor:pointer;}
   .prow .pc .hf{border-color:#9a3412;}
   .prow .pc .hf.act{background:#7c2d12; color:#fed7aa; border-color:#9a3412;}
   .prow .pc button:disabled{opacity:.3; cursor:default;}
-  .prow .pv{flex:1; text-align:center; font-size:15px; font-weight:800; white-space:nowrap;}
+  .prow .pv{flex:1; text-align:center; font-size:14px; font-weight:800; white-space:nowrap;}
   .prow .pv.zero{color:var(--sub);}
-  .prow .pv .arw{color:var(--warn); font-weight:800; margin:0 7px; font-size:13px;}
+  .prow .pv .arw{color:var(--warn); font-weight:800; margin:0 6px; font-size:12px;}
   .prow .pv .res{color:var(--warn);}
-  .modal-actions{display:grid; grid-template-columns:1fr; gap:8px; margin-top:4px;}
-  .modal .apply{height:50px; border:0; border-radius:12px; background:var(--hz1); color:var(--hz2);
-    font-size:16px; font-weight:900; cursor:pointer;}
-  .modal .clear{height:46px; border:1px solid var(--warn); background:transparent; color:var(--warn);
-    font-size:15px; font-weight:800; border-radius:12px; cursor:pointer;}
-  .modal .close{height:40px; border:0; background:transparent; color:var(--sub); font-size:14px; cursor:pointer;}
+  .modal .apply{height:48px; border:0; border-radius:11px; background:var(--hz1); color:var(--hz2);
+    font-size:15px; font-weight:900; cursor:pointer;}
+  .modal .clear{height:44px; border:1px solid var(--warn); background:transparent; color:var(--warn);
+    font-size:14px; font-weight:800; border-radius:11px; cursor:pointer;}
+  .modal .close{height:38px; border:0; background:transparent; color:var(--sub); font-size:14px; cursor:pointer;}
 
-  .toast{position:fixed; left:50%; bottom:28px; transform:translateX(-50%) translateY(20px);
-    background:var(--accent); color:#052e16; font-weight:800; padding:14px 26px;
-    border-radius:999px; opacity:0; transition:.25s; pointer-events:none; font-size:16px; z-index:30;}
+  .toast{position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(18px);
+    background:var(--accent); color:#052e16; font-weight:800; padding:12px 22px;
+    border-radius:999px; opacity:0; transition:.25s; pointer-events:none; font-size:15px; z-index:30;}
   .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
 </style>
 </head>
 <body>
-  <div class="bar">
-    <div class="field"><label>営業日</label><input type="date" id="bizdate"></div>
-    <div class="field" style="flex:1;"><label>イベント</label><input type="text" id="ev" placeholder="例：夏祭り 屋台"></div>
-    <span class="now" id="clock"></span>
-  </div>
-
   <div class="tabs">
     <button class="tab active" data-tab="register">🧾 レジ</button>
     <button class="tab" data-tab="sales">📊 売上 <span class="dot" id="tabCount"></span></button>
-    <button class="discbtn" id="discBtn"><span class="ico">🏷️</span><span class="txt" id="discBtnTxt">値引き</span></button>
   </div>
 
-  <!-- レジ画面 -->
+  <!-- レジ -->
   <div class="page active" id="pageRegister">
-    <div class="left">
-      <div class="hazbanner">
-        <span class="lbl">⚠ 値引き中</span>
-        <span class="amt" id="hazAmt">対象商品あり</span>
-        <span class="lbl">解除するまで継続</span>
-      </div>
-      <section class="products" id="products"></section>
+    <div class="swiper" id="swiper">
+      <!-- 商品 -->
+      <section class="slide">
+        <div class="prodhead">
+          <div class="ttl"><span class="lbl">小計</span><span class="val totalVal">¥0</span></div>
+          <button class="discbtn" id="discBtn"><span class="txt" id="discBtnTxt">値引き</span></button>
+        </div>
+        <div class="products" id="products"></div>
+      </section>
+      <!-- 電卓 -->
+      <section class="slide">
+        <div class="calc">
+          <div class="crow total"><span class="lbl">合計</span><span class="val totalVal">¥0</span></div>
+          <div class="crow"><span class="lbl">預り金</span><span class="val recv" id="received">¥0</span></div>
+          <div class="changebox" id="changebox"><span class="lbl">おつり</span><span class="val" id="change">¥0</span></div>
+          <div class="quick" id="quick">
+            <button data-q="1000">+1000</button><button data-q="5000">+5000</button><button data-q="10000">+10000</button>
+          </div>
+          <div class="keypad" id="keypad">
+            <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
+            <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+            <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
+            <button class="fn" data-k="00">00</button><button data-k="0">0</button><button class="fn clr" data-k="del">←</button>
+          </div>
+          <div class="actions">
+            <button class="btn-clear" id="clearAll">取消</button>
+            <button class="btn-pay" id="payBtn" disabled>会計する</button>
+          </div>
+        </div>
+      </section>
     </div>
-
-    <section class="register" id="register">
-      <div class="totalbox"><span class="lbl">合計</span><span class="val" id="total">¥0</span></div>
-      <div class="payline"><span class="lbl">預り金</span><span class="val" id="received">¥0</span></div>
-      <div class="changebox" id="changebox"><span class="lbl">おつり</span><span class="val" id="change">¥0</span></div>
-      <div class="quick" id="quick">
-        <button data-q="1000">+1000</button><button data-q="5000">+5000</button><button data-q="10000">+10000</button>
-      </div>
-      <div class="keypad" id="keypad">
-        <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
-        <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
-        <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
-        <button class="fn" data-k="00">00</button><button data-k="0">0</button><button class="fn clr" data-k="del">←</button>
-      </div>
-      <div class="actions">
-        <button class="btn-clear" id="clearAll">取消</button>
-        <button class="btn-pay" id="payBtn" disabled>会計する</button>
-      </div>
-    </section>
+    <div class="segs">
+      <div class="seg active" data-p="0">🍢 商品</div>
+      <div class="seg" data-p="1">🧮 電卓</div>
+    </div>
   </div>
 
-  <!-- 売上画面 -->
+  <!-- 売上 -->
   <div class="page" id="pageSales">
+    <div class="setrow">
+      <div class="f"><label>営業日</label><input type="date" id="bizdate"></div>
+      <div class="f" style="flex:1;"><label>イベント</label><input type="text" id="ev" placeholder="例：夏祭り 屋台"></div>
+    </div>
     <div class="grand">
       <div class="card total"><div class="lbl">総売上</div><div class="big" id="grandTotal">¥0</div></div>
       <div class="card"><div class="lbl">営業日数</div><div class="big" id="grandDays">0</div></div>
-      <div class="card"><div class="lbl">総会計数</div><div class="big" id="grandCount">0</div></div>
-      <div class="card act">
-        <button class="btn-export" id="exportBtn">⬆ CSVで書き出す／共有</button>
-        <button class="danger" id="clearData">全データ消去</button>
-      </div>
+      <div class="card"><div class="lbl">総会計</div><div class="big" id="grandCount">0</div></div>
+    </div>
+    <div class="act">
+      <button class="btn-export" id="exportBtn">⬆ CSVで書き出す／共有</button>
+      <button class="danger" id="clearData">全消去</button>
     </div>
     <div id="dayList"></div>
   </div>
 
-  <!-- 値引きモーダル（商品ごと）-->
+  <!-- 値引きモーダル -->
   <div class="modal-bg" id="discModal">
     <div class="modal">
       <h3>🏷️ 値引き設定（商品ごと）</h3>
-      <p>商品ごとに単価を設定できます。<b>−100で値下げ</b>／<b>＋100で戻す</b>（定価より高くはできません／0円以下にもなりません）。適用中は解除するまで継続（営業日を変えると自動で解除）。</p>
+      <p>商品ごとに単価を設定。<b>−100で値下げ</b>／<b>＋100で戻す</b>（定価超え・0円以下は不可）。適用中は解除するまで継続（営業日を変えると自動解除）。</p>
       <div id="discRows"></div>
-      <div class="modal-actions">
-        <button class="apply" id="discApply">この内容で適用</button>
-        <button class="clear" id="discClear">すべて解除</button>
-      </div>
+      <button class="apply" id="discApply">この内容で適用</button>
+      <button class="clear" id="discClear">すべて解除</button>
       <button class="close" id="discClose">閉じる</button>
     </div>
   </div>
@@ -278,8 +283,8 @@
   const counts = PRODUCTS.map(()=>0);
   let received = 0;
   let txns = loadTxns();
-  let discounts = PRODUCTS.map(()=>null);          // 各商品: null | {type:'amount',value} | {type:'half'}
-  let draft = PRODUCTS.map(()=>({type:"amount", value:0}));  // モーダル下書き
+  let discounts = PRODUCTS.map(()=>null);
+  let draft = PRODUCTS.map(()=>({type:"amount", value:0}));
 
   function loadTxns(){ try{ return JSON.parse(localStorage.getItem(STORE))||[]; }catch(e){ return []; } }
   function saveTxns(){ try{ localStorage.setItem(STORE, JSON.stringify(txns)); }catch(e){} }
@@ -290,7 +295,6 @@
     bd.value=`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; })();
   const evInput = document.getElementById("ev");
 
-  // 値引きの復元（営業日一致時のみ＝日付が変われば自動解除）
   (function(){ try{
     const s=JSON.parse(localStorage.getItem(DSTORE));
     if(s && s.discounts && s.date===bd.value && Array.isArray(s.discounts) && s.discounts.length===PRODUCTS.length){
@@ -303,11 +307,6 @@
     render();
   });
 
-  function tick(){ document.getElementById("clock").textContent=
-    new Date().toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"}); }
-  tick(); setInterval(tick,15000);
-
-  /* 実売単価（商品ごと）*/
   function eff(i){
     const p=PRODUCTS[i].price, d=discounts[i];
     if(!d) return p;
@@ -322,10 +321,12 @@
   PRODUCTS.forEach((p,i)=>{
     const row=document.createElement("div"); row.className="product"; row.id="row"+i;
     row.innerHTML=`<div class="info"><div class="name">${p.name}</div><div class="price" id="pr${i}"></div></div>
-      <div class="ctrl"><div class="line">小計<b id="sub${i}">¥0</b></div>
+      <div class="ctrl">
+        <span class="sub" id="sub${i}">¥0</span>
         <button data-act="minus" data-i="${i}" id="minus${i}">−</button>
         <span class="count" id="cnt${i}">0</span>
-        <button class="plus" data-act="plus" data-i="${i}">＋</button></div>`;
+        <button class="plus" data-act="plus" data-i="${i}">＋</button>
+      </div>`;
     prodEl.appendChild(row);
   });
   prodEl.addEventListener("click", e=>{
@@ -364,11 +365,10 @@
       if(c>0) any=true;
     });
     const net=getNet();
-    document.getElementById("total").textContent=yen(net);
+    document.querySelectorAll(".totalVal").forEach(el=>el.textContent=yen(net));
     document.getElementById("received").textContent=yen(received);
 
     document.getElementById("pageRegister").classList.toggle("disc", anyDisc());
-    document.getElementById("hazAmt").textContent = anyDisc() ? ("対象 "+discCount()+"品") : "";
     const dbtn=document.getElementById("discBtn"), dtxt=document.getElementById("discBtnTxt");
     dbtn.classList.toggle("on", anyDisc());
     dtxt.textContent = anyDisc() ? ("値引き中 "+discCount()+"品") : "値引き";
@@ -380,7 +380,7 @@
     document.getElementById("payBtn").disabled=!(any && received>=net);
   }
 
-  /* 会計（値引きは会計後も継続。counts と 預り金 のみリセット）*/
+  /* 会計 */
   document.getElementById("payBtn").addEventListener("click", ()=>{
     const items=PRODUCTS.map((p,i)=>({name:p.name,price:p.price,count:counts[i],unit:eff(i)})).filter(it=>it.count>0);
     const gross=items.reduce((s,it)=>s+it.price*it.count,0);
@@ -395,13 +395,14 @@
     saveTxns();
     showToast(`会計完了　おつり ${yen(received-net)}`,1600);
     counts.fill(0); received=0; render(); renderSales();
+    swiper.scrollTo({left:0, behavior:"smooth"});   // 次のお客さん用に商品へ戻る
   });
   document.getElementById("clearAll").addEventListener("click", ()=>{ counts.fill(0); received=0; render(); });
   document.getElementById("clearData").addEventListener("click", ()=>{
     if(confirm("すべての売上データを消去します。よろしいですか？")){ txns=[]; saveTxns(); renderSales(); }
   });
 
-  /* ===== 値引きモーダル（商品ごと）===== */
+  /* 値引きモーダル */
   const modal=document.getElementById("discModal");
   const rowsEl=document.getElementById("discRows");
   PRODUCTS.forEach((p,i)=>{
@@ -425,19 +426,15 @@
       const upBtn=document.getElementById("up"+i);
       const curVal = d.type==="amount" ? d.value : 0;
       const curPrice = d.type==="half" ? Math.floor(price/2) : (price - curVal);
-      const cutAmt = price - curPrice;   // 実際に引けた額
+      const cutAmt = price - curPrice;
       let set=false;
       if(d.type==="half" || curVal>0){
-        // 元値 −値引き額→ 値引き後価格
         pv.innerHTML=`${yen(price)}<span class="arw">−${yen(cutAmt)}→</span><span class="res">${yen(curPrice)}</span>`;
         set=true;
-      } else {
-        pv.innerHTML=yen(price);   // 値引きなし＝元値のみ
-      }
+      } else { pv.innerHTML=yen(price); }
       pv.className="pv "+(set?"":"zero");
       hf.classList.toggle("act", d.type==="half");
       row.classList.toggle("sel", set);
-      // −100=値下げ（最低単価100円・0円以下不可）／＋100=値上げ（定価が上限）
       downBtn.disabled = (d.type==="half") || (curPrice <= 100);
       upBtn.disabled   = (d.type==="half") || (curVal === 0);
     });
@@ -447,13 +444,9 @@
     const i=+b.closest(".prow").dataset.i;
     const a=b.dataset.a, price=PRODUCTS[i].price;
     const cur = draft[i].type==="amount" ? draft[i].value : 0;
-    if(a==="half"){
-      draft[i] = draft[i].type==="half" ? {type:"amount",value:0} : {type:"half"};
-    } else if(a==="down"){      // 値下げ＝値引き増（最低単価100円まで）
-      draft[i] = {type:"amount", value:Math.min(price-100, cur+100)};
-    } else {                    // ＋100＝値上げ＝値引き減（定価が上限）
-      draft[i] = {type:"amount", value:Math.max(0, cur-100)};
-    }
+    if(a==="half"){ draft[i] = draft[i].type==="half" ? {type:"amount",value:0} : {type:"half"}; }
+    else if(a==="down"){ draft[i] = {type:"amount", value:Math.min(price-100, cur+100)}; }
+    else { draft[i] = {type:"amount", value:Math.max(0, cur-100)}; }
     drawDraft();
   });
   function openModal(){
@@ -474,15 +467,14 @@
     drawDraft(); saveDisc(); closeModal(); render(); showToast("すべての値引きを解除しました",1400);
   });
 
-  /* CSV書き出し／共有 */
+  /* CSV */
   function buildCSV(){
     const head=["日付","イベント","会計No","時刻","商品","通常単価","適用単価","単価値引き","個数","金額","会計小計","会計値引き計","会計合計","預り金","おつり"];
     const rows=[head];
     txns.slice().sort((a,b)=>(a.date+String(a.id).padStart(6,"0")).localeCompare(b.date+String(b.id).padStart(6,"0")))
       .forEach(t=>t.items.forEach((it,idx)=>{
         const unit=(it.unit!=null?it.unit:it.price);
-        const perDisc=it.price-unit;
-        rows.push([t.date,t.event||"",t.id,t.time,it.name,it.price,unit,perDisc,it.count,unit*it.count,
+        rows.push([t.date,t.event||"",t.id,t.time,it.name,it.price,unit,it.price-unit,it.count,unit*it.count,
           idx===0?(t.subtotal!=null?t.subtotal:t.total):"", idx===0?(t.discount||0):"",
           idx===0?t.total:"", idx===0?t.received:"", idx===0?t.change:""]);
       }));
@@ -507,7 +499,7 @@
   }
   document.getElementById("exportBtn").addEventListener("click", exportCSV);
 
-  /* 売上（日付ごと集計・実売ベース）*/
+  /* 売上 */
   function renderSales(){
     document.getElementById("grandTotal").textContent=yen(txns.reduce((s,t)=>s+t.total,0));
     document.getElementById("grandCount").textContent=txns.length;
@@ -527,24 +519,17 @@
       const dayQty=dt.reduce((s,t)=>s+t.items.reduce((a,it)=>a+it.count,0),0);
       const events=[...new Set(dt.map(t=>t.event).filter(Boolean))];
       const evLabel=events.length?events.join(" / "):"（イベント名なし）";
-
-      // 品目別（実売＋商品ごと値引き額）
       const agg={};
       dt.forEach(t=>t.items.forEach(it=>{
         const unit=(it.unit!=null?it.unit:it.price);
         if(!agg[it.name]) agg[it.name]={count:0,amount:0,disc:0};
-        agg[it.name].count+=it.count; agg[it.name].amount+=unit*it.count;
-        agg[it.name].disc+=(it.price-unit)*it.count;
+        agg[it.name].count+=it.count; agg[it.name].amount+=unit*it.count; agg[it.name].disc+=(it.price-unit)*it.count;
       }));
       const rows=Object.entries(agg).map(([n,v])=>
         `<tr><td>${n}</td><td><span class="cnt">${v.count}</span> 個${v.disc>0?`<span class="dc">値引-${yen(v.disc)}</span>`:""}</td><td>${yen(v.amount)}</td></tr>`).join("");
-
-      // 値引きがある日だけ表示
       const discMeta = dayDisc>0 ? ` ／ <span class="dsc">値引 -${yen(dayDisc)}</span>（定価計 ${yen(dayGross)}）` : "";
-
       const txnHtml=dt.slice().reverse().map(t=>{
         const lines=t.items.map(it=>`${it.name}×${it.count}`).join("　");
-        // 値引きのある会計のみ、内訳を1行追加
         let drow="";
         if(t.discount>0){
           const detail=t.items.filter(it=>(it.price-(it.unit!=null?it.unit:it.price))>0)
@@ -553,14 +538,10 @@
         }
         return `<div class="txn ${t.discount>0?'d':''}"><div class="h"><span class="no">No.${t.id} <span class="time">${t.time}</span></span><span class="amt">${yen(t.total)}</span></div><div class="lines">${lines}　<span>(預${yen(t.received)}/釣${yen(t.change)})</span></div>${drow}</div>`;
       }).join("");
-
       return `<div class="daygroup">
-        <div class="dayhead">
-          <span class="date">${fmtDate(date)}</span>
-          <span class="ev">${evLabel}</span>
+        <div class="dayhead"><span class="date">${fmtDate(date)}</span><span class="ev">${evLabel}</span>
           <span class="sum">${yen(dayTotal)}</span>
-          <span class="meta">会計 ${dt.length}件 ／ 販売 ${dayQty}点${discMeta}</span>
-        </div>
+          <span class="meta">会計 ${dt.length}件 ／ 販売 ${dayQty}点${discMeta}</span></div>
         <div class="daybody">
           <div class="byitem"><h4>品目別（実売）</h4><table><tbody>${rows}</tbody></table></div>
           <div class="txns"><h4>会計履歴</h4>${txnHtml}</div>
@@ -575,6 +556,7 @@
     return `${y}年${m}月${day}日(${w})`;
   }
 
+  /* タブ切替 */
   document.querySelector(".tabs").addEventListener("click", e=>{
     const b=e.target.closest(".tab"); if(!b) return;
     document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t===b));
@@ -582,6 +564,22 @@
     document.getElementById("pageSales").classList.toggle("active",b.dataset.tab==="sales");
     if(b.dataset.tab==="sales") renderSales();
   });
+
+  /* スワイプ（商品⇄電卓）とインジケータ */
+  const swiper=document.getElementById("swiper");
+  const segs=[...document.querySelectorAll(".seg")];
+  let dotRaf=false;
+  swiper.addEventListener("scroll", ()=>{
+    if(dotRaf) return; dotRaf=true;
+    requestAnimationFrame(()=>{
+      const i=Math.round(swiper.scrollLeft/Math.max(1,swiper.clientWidth));
+      segs.forEach((s,ix)=>s.classList.toggle("active",ix===i));
+      dotRaf=false;
+    });
+  }, {passive:true});
+  segs.forEach((s,ix)=>s.addEventListener("click", ()=>{
+    swiper.scrollTo({left:ix*swiper.clientWidth, behavior:"smooth"});
+  }));
 
   let toastTimer;
   function showToast(msg,ms=900){
@@ -591,7 +589,7 @@
 
   render(); renderSales();
 
-  /* PWA: Service Worker 登録（オフライン起動用）*/
+  /* PWA */
   if("serviceWorker" in navigator){
     window.addEventListener("load", ()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
   }
