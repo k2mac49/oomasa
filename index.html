@@ -507,10 +507,14 @@
     swiper.scrollTo({left:0, behavior:"smooth"});   // 次のお客さん用に商品へ戻る
   });
   /* 取消：電卓の C / AC と同じ挙動。
-     1回目＝預り金だけ消す（C）／もう一度押す＝商品の個数も消す（AC） */
+     1回目＝預り金だけ消す（C）／もう一度押す＝商品の個数も消す（AC）。
+     AC は打った商品まで消えてしまうので、必ず確認してから実行する。 */
   document.getElementById("clearAll").addEventListener("click", ()=>{
-    if(received>0) received=0;   // C
-    else counts={};              // AC
+    if(received>0){ received=0; render(); return; }        // C：預り金だけ。確認なし
+    const qty=visible().reduce((sum,p)=>sum+cnt(p),0);
+    if(qty===0) return;                                    // 消すものがない
+    if(!confirm("商品の個数もすべてリセットされます。\n（現在 "+qty+"点 ／ "+yen(getNet())+"）\nよろしいですか？")) return;
+    counts={};                                             // AC
     render();
   });
   document.getElementById("clearData").addEventListener("click", ()=>{
