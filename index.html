@@ -28,8 +28,8 @@
 
   /* タブ（メニュー） */
   .tabs{display:flex; gap:6px; padding:6px 10px; border-bottom:1px solid var(--line); background:var(--panel);}
-  .tab{flex:1; border:0; background:transparent; color:var(--sub); font-size:15px; font-weight:700;
-    padding:9px 0; cursor:pointer; border-radius:10px;}
+  .tab{flex:1; border:0; background:transparent; color:var(--sub); font-size:14px; font-weight:700;
+    padding:9px 0; cursor:pointer; border-radius:10px; white-space:nowrap;}
   .tab.active{color:var(--txt); background:var(--panel2);}
   .tab .dot{color:var(--accent); font-weight:800;}
 
@@ -40,11 +40,11 @@
   .swiper{flex:1; min-height:0; display:flex; overflow-x:auto; overflow-y:hidden;
     scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; scrollbar-width:none;}
   .swiper::-webkit-scrollbar{display:none;}
-  .slide{flex:0 0 100%; width:100%; height:100%; scroll-snap-align:start;
+  .slide{flex:0 0 100%; width:100%; height:100%; scroll-snap-align:start; scroll-snap-stop:always;
     display:flex; flex-direction:column; min-height:0; padding:8px;}
 
   /* 商品ページ */
-  .prodhead{display:flex; align-items:center; gap:10px; padding:8px 10px; margin-bottom:8px;
+  .prodhead{position:sticky; top:0; z-index:3; display:flex; align-items:center; gap:10px; padding:8px 10px; margin-bottom:8px;
     background:var(--panel); border:1px solid var(--line); border-radius:12px;}
   .prodhead .ttl{flex:1; display:flex; align-items:baseline; gap:8px;}
   .prodhead .ttl .lbl{font-size:13px; color:var(--sub);}
@@ -157,7 +157,41 @@
   .txn .amt{font-weight:900; font-size:15px;}
   .txn .lines{color:var(--sub); font-size:12px; margin-top:2px;}
   .txn .drow{margin-top:4px; font-size:11px; color:var(--warn); font-weight:700;}
+  .txn .h .r{display:flex; align-items:baseline; gap:4px;}
+  .txn .del{border:0; background:transparent; color:var(--sub); font-size:14px; line-height:1;
+    padding:3px 5px; cursor:pointer;}
+  .txn .del:active{color:var(--warn);}
   .empty{color:var(--sub); text-align:center; padding:26px 0;}
+
+  /* ===== 設定ページ（商品と金額） ===== */
+  #pageSettings{overflow-y:auto; padding:10px; gap:10px;}
+  .ehead{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px 12px;}
+  .ehead h3{font-size:15px; margin-bottom:4px;}
+  .ehead p{font-size:12px; color:var(--sub); line-height:1.55;}
+  .erow{display:flex; gap:8px; background:var(--panel); border:1px solid var(--line);
+    border-radius:12px; padding:8px; margin-bottom:8px;}
+  .erow.off{opacity:.5;}
+  .erow .ord{display:flex; flex-direction:column; gap:4px;}
+  .erow .ord button{width:34px; height:30px; border:1px solid var(--line); background:var(--panel2);
+    color:var(--txt); border-radius:8px; font-size:14px; cursor:pointer; line-height:1;}
+  .erow .ord button:disabled{opacity:.3;}
+  .erow .ebody{flex:1; min-width:0; display:flex; flex-direction:column; gap:6px;}
+  .erow .etop{display:flex; align-items:center; gap:6px;}
+  .erow .ename,.erow .eprice{background:var(--bg); color:var(--txt); border:1px solid var(--line);
+    border-radius:8px; padding:9px 10px; font-size:16px; font-family:inherit;}
+  .erow .ename{flex:1 1 auto; min-width:0; text-align:left;}
+  .erow .cur{font-size:14px; color:var(--sub); flex:0 0 auto;}
+  .erow .eprice{flex:0 0 82px; width:82px; text-align:right; font-weight:800;}
+  .erow .esub{display:flex; align-items:center; gap:8px;}
+  .erow .tgl{min-width:86px; text-align:center;}
+  .erow .tgl.on{background:var(--accent2); color:#052e16; border-color:var(--accent2);}
+  .erow .tgl.off{color:var(--sub);}
+  .erow .mini{height:36px; padding:0 11px; border:1px solid var(--line); background:var(--bg);
+    color:var(--txt); border-radius:9px; font-size:13px; font-weight:800; cursor:pointer; white-space:nowrap;}
+  .erow .mini.del{margin-left:auto; color:var(--warn); border-color:var(--warn);}
+  .btn-add{width:100%; background:var(--accent); color:#052e16; border:0; border-radius:10px;
+    padding:13px; font-size:15px; font-weight:800; cursor:pointer;}
+  .btn-add:active{transform:scale(.99);}
 
   /* 値引きモーダル */
   .modal-bg{display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:20;
@@ -191,16 +225,22 @@
     background:var(--accent); color:#052e16; font-weight:800; padding:12px 22px;
     border-radius:999px; opacity:0; transition:.25s; pointer-events:none; font-size:15px; z-index:30;}
   .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+  .toast.err{background:var(--warn); color:#fff;}
+  .toast.act{pointer-events:auto; display:flex; align-items:center; gap:14px; padding:9px 10px 9px 20px;}
+  .toast .undo{border:0; background:var(--hz2); color:var(--hz1); font-weight:900; font-size:14px;
+    padding:9px 16px; border-radius:999px; cursor:pointer; white-space:nowrap;}
+  .toast .undo:active{transform:scale(.96);}
 </style>
 </head>
 <body>
   <div class="tabs">
     <button class="tab active" data-tab="register">🧾 レジ</button>
     <button class="tab" data-tab="sales">📊 売上 <span class="dot" id="tabCount"></span></button>
+    <button class="tab" data-tab="settings">⚙️ 設定</button>
   </div>
 
   <!-- レジ -->
-  <div class="page active" id="pageRegister">
+  <div class="page active" id="pageRegister" data-page="register">
     <div class="swiper" id="swiper">
       <!-- 商品 -->
       <section class="slide">
@@ -239,7 +279,7 @@
   </div>
 
   <!-- 売上 -->
-  <div class="page" id="pageSales">
+  <div class="page" id="pageSales" data-page="sales">
     <div class="setrow">
       <div class="f"><label>営業日</label><input type="date" id="bizdate"></div>
       <div class="f" style="flex:1;"><label>イベント</label><input type="text" id="ev" placeholder="例：夏祭り 屋台"></div>
@@ -254,6 +294,19 @@
       <button class="danger" id="clearData">全消去</button>
     </div>
     <div id="dayList"></div>
+  </div>
+
+  <!-- 設定 -->
+  <div class="page" id="pageSettings" data-page="settings">
+    <div class="ehead">
+      <h3>🍢 商品と金額</h3>
+      <p><b>無効</b>にした商品はレジの一覧に出てきません（削除ではないので、いつでも有効に戻せます）。<br>
+        ここでの変更は<b>次の会計から</b>反映されます。記録済みの売上は変わりません
+        （会計時の商品名・価格がそのまま保存されているため）。<br>
+        価格を変えると、その商品の値引きは自動で解除されます。</p>
+    </div>
+    <div id="prodEdit"></div>
+    <button class="btn-add" id="addProd">＋ 商品を追加</button>
   </div>
 
   <!-- 値引きモーダル -->
@@ -271,24 +324,53 @@
   <div class="toast" id="toast"></div>
 
 <script>
-  const PRODUCTS = [
-    {name:"焼うどん", price:600},
-    {name:"豚バラ",   price:600},
-    {name:"梅酒",     price:500},
+  /* ===== 商品マスタ（⚙️設定タブで編集） ===== */
+  const DEFAULTS = [
+    {id:"p1", name:"焼うどん", price:600, on:true},
+    {id:"p2", name:"豚バラ",   price:600, on:true},
+    {id:"p3", name:"梅酒",     price:500, on:true},
   ];
-  const yen = n => "¥" + n.toLocaleString("ja-JP");
-  const STORE = "regmock_txns_v2";
-  const DSTORE = "regmock_disc_v2";
+  const STORE  = "regmock_txns_v2";   // 会計履歴（形式は従来どおり）
+  const DSTORE = "regmock_disc_v3";   // 値引き（商品IDキー）
+  const PSTORE = "regmock_prods_v1";  // 商品マスタ
 
-  const counts = PRODUCTS.map(()=>0);
-  let received = 0;
-  let txns = loadTxns();
-  let discounts = PRODUCTS.map(()=>null);
-  let draft = PRODUCTS.map(()=>({type:"amount", value:0}));
+  const yen = n => "¥" + n.toLocaleString("ja-JP");
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const sel = id => `[data-id="${CSS.escape(id)}"]`;
+
+  let PRODUCTS  = loadProducts();
+  let counts    = {};   // {商品ID: 個数}
+  let discounts = {};   // {商品ID: {type:"amount",value} | {type:"half"}}
+  let draft     = {};
+  let received  = 0;
+  let txns      = loadTxns();
+
+  function loadProducts(){
+    try{
+      const a = JSON.parse(localStorage.getItem(PSTORE));
+      if(Array.isArray(a)) return a.map(p=>({
+        id:String(p.id||""), name:String(p.name==null?"":p.name),
+        price:Math.max(0, parseInt(p.price,10)||0),
+        on: p.on!==undefined ? !!p.on : !p.off   // 旧形式（off/sold）からの読み替え
+      })).filter(p=>p.id);
+    }catch(e){}
+    return DEFAULTS.map(p=>({...p}));
+  }
+  function saveProducts(){
+    try{ localStorage.setItem(PSTORE, JSON.stringify(PRODUCTS)); return true; }
+    catch(e){ showToast("⚠️ 商品設定を保存できませんでした", 4000, true); return false; }
+  }
+  function newId(){ return "p"+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
 
   function loadTxns(){ try{ return JSON.parse(localStorage.getItem(STORE))||[]; }catch(e){ return []; } }
-  function saveTxns(){ try{ localStorage.setItem(STORE, JSON.stringify(txns)); }catch(e){} }
-  function saveDisc(){ try{ localStorage.setItem(DSTORE, JSON.stringify({discounts, date:bd.value})); }catch(e){} }
+  function saveTxns(){
+    try{ localStorage.setItem(STORE, JSON.stringify(txns)); return true; }
+    catch(e){ showToast("⚠️ 売上を保存できませんでした。今すぐCSVで書き出してください", 6000, true); return false; }
+  }
+  function saveDisc(){
+    try{ localStorage.setItem(DSTORE, JSON.stringify({discounts, date:bd.value})); return true; }
+    catch(e){ showToast("⚠️ 値引き設定を保存できませんでした", 4000, true); return false; }
+  }
 
   const bd = document.getElementById("bizdate");
   (function(){ const d=new Date(); const p=n=>String(n).padStart(2,"0");
@@ -297,45 +379,58 @@
 
   (function(){ try{
     const s=JSON.parse(localStorage.getItem(DSTORE));
-    if(s && s.discounts && s.date===bd.value && Array.isArray(s.discounts) && s.discounts.length===PRODUCTS.length){
-      discounts=s.discounts;
-    }
+    if(s && s.discounts && s.date===bd.value && typeof s.discounts==="object") discounts=s.discounts;
   }catch(e){} })();
 
   bd.addEventListener("change", ()=>{
-    if(discounts.some(Boolean)){ discounts=PRODUCTS.map(()=>null); saveDisc(); showToast("営業日変更のため値引きを解除しました",1600); }
+    if(anyDisc()){ discounts={};
+      if(saveDisc()) showToast("営業日変更のため値引きを解除しました",1600); }
     render();
   });
 
-  function eff(i){
-    const p=PRODUCTS[i].price, d=discounts[i];
-    if(!d) return p;
-    if(d.type==="half") return Math.floor(p/2);
-    return Math.max(0, p - d.value);
+  /* ===== 金額計算 ===== */
+  function eff(p){
+    const d=discounts[p.id];
+    if(!d) return p.price;
+    if(d.type==="half") return Math.floor(p.price/2);
+    return Math.max(0, p.price - d.value);
   }
-  function anyDisc(){ return discounts.some(Boolean); }
-  function discCount(){ return discounts.filter(Boolean).length; }
+  const cnt = p => counts[p.id]||0;
+  const visible = () => PRODUCTS.filter(p=>p.on);   // 「有効」の商品だけレジに出す
+  function anyDisc(){ return visible().some(p=>!!discounts[p.id]); }
+  function discCount(){ return visible().filter(p=>!!discounts[p.id]).length; }
+  function getNet(){ return visible().reduce((s,p)=>s+cnt(p)*eff(p),0); }
 
-  /* 商品行 */
+  /* ===== レジ：商品行 ===== */
   const prodEl=document.getElementById("products");
-  PRODUCTS.forEach((p,i)=>{
-    const row=document.createElement("div"); row.className="product"; row.id="row"+i;
-    row.innerHTML=`<div class="info"><div class="name">${p.name}</div><div class="price" id="pr${i}"></div></div>
-      <div class="ctrl">
-        <span class="sub" id="sub${i}">¥0</span>
-        <button data-act="minus" data-i="${i}" id="minus${i}">−</button>
-        <span class="count" id="cnt${i}">0</span>
-        <button class="plus" data-act="plus" data-i="${i}">＋</button>
-      </div>`;
-    prodEl.appendChild(row);
-  });
+  function buildProducts(){
+    const list=visible();
+    if(!list.length){
+      prodEl.innerHTML=`<div class="empty">レジに出す商品がありません<br>⚙️ 設定タブで追加するか、商品を「有効」にしてください</div>`;
+      return;
+    }
+    prodEl.innerHTML=list.map(p=>`
+      <div class="product" data-id="${esc(p.id)}">
+        <div class="info">
+          <div class="name">${esc(p.name)}</div>
+          <div class="price"></div>
+        </div>
+        <div class="ctrl">
+          <span class="sub">¥0</span>
+          <button data-act="minus">−</button>
+          <span class="count">0</span>
+          <button class="plus" data-act="plus">＋</button>
+        </div>
+      </div>`).join("");
+  }
   prodEl.addEventListener("click", e=>{
-    const b=e.target.closest("button[data-act]"); if(!b) return;
-    const i=+b.dataset.i;
-    counts[i]=Math.max(0, counts[i]+(b.dataset.act==="plus"?1:-1)); render();
+    const b=e.target.closest("button[data-act]"); if(!b || b.disabled) return;
+    const id=b.closest(".product").dataset.id;
+    counts[id]=Math.max(0,(counts[id]||0)+(b.dataset.act==="plus"?1:-1));
+    render();
   });
 
-  /* 電卓 */
+  /* ===== 電卓 ===== */
   document.getElementById("keypad").addEventListener("click", e=>{
     const k=e.target.dataset.k; if(k===undefined) return;
     let s=String(received);
@@ -349,19 +444,18 @@
     received=Math.min(99999999, received+(+q)); render();
   });
 
-  function getNet(){ return counts.reduce((s,c,i)=>s+c*eff(i),0); }
-
   function render(){
     let any=false;
-    counts.forEach((c,i)=>{
-      const p=PRODUCTS[i], e=eff(i), on=!!discounts[i];
-      document.getElementById("cnt"+i).textContent=c;
-      document.getElementById("sub"+i).textContent=yen(c*e);
-      document.getElementById("minus"+i).disabled=c===0;
-      document.getElementById("pr"+i).innerHTML = on
+    visible().forEach(p=>{
+      const row=prodEl.querySelector(".product"+sel(p.id)); if(!row) return;
+      const c=cnt(p), e=eff(p), on=!!discounts[p.id];
+      row.querySelector(".count").textContent=c;
+      row.querySelector(".sub").textContent=yen(c*e);
+      row.querySelector('button[data-act="minus"]').disabled = c===0;
+      row.querySelector(".price").innerHTML = on
         ? `<s>${yen(p.price)}</s><span class="now">${yen(e)}</span>`
         : yen(p.price);
-      document.getElementById("row"+i).classList.toggle("on", on);
+      row.classList.toggle("on", on);
       if(c>0) any=true;
     });
     const net=getNet();
@@ -380,58 +474,70 @@
     document.getElementById("payBtn").disabled=!(any && received>=net);
   }
 
-  /* 会計 */
+  /* ===== 会計 ===== */
   document.getElementById("payBtn").addEventListener("click", ()=>{
-    const items=PRODUCTS.map((p,i)=>({name:p.name,price:p.price,count:counts[i],unit:eff(i)})).filter(it=>it.count>0);
+    const items=visible().filter(p=>cnt(p)>0).map(p=>({name:p.name,price:p.price,count:cnt(p),unit:eff(p)}));
     const gross=items.reduce((s,it)=>s+it.price*it.count,0);
     const net=items.reduce((s,it)=>s+it.unit*it.count,0);
-    txns.push({
+    const txn={
       id:(txns.reduce((m,t)=>Math.max(m,t.id||0),0))+1,
       date:bd.value||"未設定", event:evInput.value.trim(),
       time:new Date().toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"}),
       items, subtotal:gross, discount:gross-net, total:net,
       received, change:received-net
+    };
+    txns.push(txn);
+    const saved=saveTxns();
+    const snapCounts=Object.assign({},counts), snapRecv=received;
+    if(saved) showUndoToast(`会計完了　おつり ${yen(received-net)}`, ()=>{
+      const ix=txns.findIndex(t=>t.id===txn.id);
+      if(ix<0){ showToast("この会計はすでにありません",1600); return; }
+      txns.splice(ix,1);
+      const ok=saveTxns();
+      // 次の客をまだ打っていなければ、打ち直せるようにカートを戻す
+      if(Object.values(counts).every(v=>!v) && received===0){ counts=Object.assign({},snapCounts); received=snapRecv; }
+      render(); renderSales();
+      if(ok) showToast(`No.${txn.id} の会計を取り消しました`,1800);
     });
-    saveTxns();
-    showToast(`会計完了　おつり ${yen(received-net)}`,1600);
-    counts.fill(0); received=0; render(); renderSales();
+    counts={}; received=0; render(); renderSales();
     swiper.scrollTo({left:0, behavior:"smooth"});   // 次のお客さん用に商品へ戻る
   });
-  document.getElementById("clearAll").addEventListener("click", ()=>{ counts.fill(0); received=0; render(); });
+  document.getElementById("clearAll").addEventListener("click", ()=>{ counts={}; received=0; render(); });
   document.getElementById("clearData").addEventListener("click", ()=>{
     if(confirm("すべての売上データを消去します。よろしいですか？")){ txns=[]; saveTxns(); renderSales(); }
   });
 
-  /* 値引きモーダル */
+  /* ===== 値引きモーダル ===== */
   const modal=document.getElementById("discModal");
   const rowsEl=document.getElementById("discRows");
-  PRODUCTS.forEach((p,i)=>{
-    const r=document.createElement("div"); r.className="prow"; r.dataset.i=i;
-    r.innerHTML=`<div class="pn">${p.name}</div>
-      <div class="pc">
-        <button data-a="down" id="down${i}">−100</button>
-        <span class="pv" id="pv${i}"></span>
-        <button data-a="up" id="up${i}">＋100</button>
-        <button class="hf" data-a="half">半額</button>
-      </div>`;
-    rowsEl.appendChild(r);
-  });
+  function buildDiscRows(){
+    const list=visible();
+    rowsEl.innerHTML=list.length ? list.map(p=>`
+      <div class="prow" data-id="${esc(p.id)}">
+        <div class="pn">${esc(p.name)}</div>
+        <div class="pc">
+          <button data-a="down">−100</button>
+          <span class="pv"></span>
+          <button data-a="up">＋100</button>
+          <button class="hf" data-a="half">半額</button>
+        </div>
+      </div>`).join("") : `<p>レジに出す商品がありません。</p>`;
+  }
   function drawDraft(){
-    PRODUCTS.forEach((p,i)=>{
-      const d=draft[i]; const price=p.price;
-      const pv=document.getElementById("pv"+i);
-      const row=rowsEl.children[i];
-      const hf=row.querySelector(".hf");
-      const downBtn=document.getElementById("down"+i);
-      const upBtn=document.getElementById("up"+i);
-      const curVal = d.type==="amount" ? d.value : 0;
-      const curPrice = d.type==="half" ? Math.floor(price/2) : (price - curVal);
-      const cutAmt = price - curPrice;
+    visible().forEach(p=>{
+      const row=rowsEl.querySelector(".prow"+sel(p.id)); if(!row) return;
+      const d=draft[p.id]||{type:"amount",value:0};
+      const pv=row.querySelector(".pv"), hf=row.querySelector(".hf");
+      const downBtn=row.querySelector('button[data-a="down"]');
+      const upBtn=row.querySelector('button[data-a="up"]');
+      const curVal   = d.type==="amount" ? d.value : 0;
+      const curPrice = d.type==="half" ? Math.floor(p.price/2) : (p.price - curVal);
+      const cutAmt   = p.price - curPrice;
       let set=false;
       if(d.type==="half" || curVal>0){
-        pv.innerHTML=`${yen(price)}<span class="arw">−${yen(cutAmt)}→</span><span class="res">${yen(curPrice)}</span>`;
+        pv.innerHTML=`${yen(p.price)}<span class="arw">−${yen(cutAmt)}→</span><span class="res">${yen(curPrice)}</span>`;
         set=true;
-      } else { pv.innerHTML=yen(price); }
+      } else pv.innerHTML=yen(p.price);
       pv.className="pv "+(set?"":"zero");
       hf.classList.toggle("act", d.type==="half");
       row.classList.toggle("sel", set);
@@ -441,33 +547,125 @@
   }
   rowsEl.addEventListener("click", e=>{
     const b=e.target.closest("button[data-a]"); if(!b || b.disabled) return;
-    const i=+b.closest(".prow").dataset.i;
-    const a=b.dataset.a, price=PRODUCTS[i].price;
-    const cur = draft[i].type==="amount" ? draft[i].value : 0;
-    if(a==="half"){ draft[i] = draft[i].type==="half" ? {type:"amount",value:0} : {type:"half"}; }
-    else if(a==="down"){ draft[i] = {type:"amount", value:Math.min(price-100, cur+100)}; }
-    else { draft[i] = {type:"amount", value:Math.max(0, cur-100)}; }
+    const id=b.closest(".prow").dataset.id;
+    const p=PRODUCTS.find(x=>x.id===id); if(!p) return;
+    const a=b.dataset.a, cur=(draft[id]&&draft[id].type==="amount")?draft[id].value:0;
+    if(a==="half") draft[id] = (draft[id]&&draft[id].type==="half") ? {type:"amount",value:0} : {type:"half"};
+    else if(a==="down") draft[id] = {type:"amount", value:Math.min(p.price-100, cur+100)};
+    else draft[id] = {type:"amount", value:Math.max(0, cur-100)};
     drawDraft();
   });
   function openModal(){
-    draft = discounts.map(d => d ? (d.type==="half"?{type:"half"}:{type:"amount",value:d.value}) : {type:"amount",value:0});
-    drawDraft(); modal.classList.add("on");
+    draft={};
+    visible().forEach(p=>{
+      const d=discounts[p.id];
+      draft[p.id] = d ? (d.type==="half"?{type:"half"}:{type:"amount",value:d.value}) : {type:"amount",value:0};
+    });
+    buildDiscRows(); drawDraft(); modal.classList.add("on");
   }
   function closeModal(){ modal.classList.remove("on"); }
   document.getElementById("discBtn").addEventListener("click", openModal);
   document.getElementById("discClose").addEventListener("click", closeModal);
   modal.addEventListener("click", e=>{ if(e.target===modal) closeModal(); });
   document.getElementById("discApply").addEventListener("click", ()=>{
-    discounts = draft.map(d => d.type==="half" ? {type:"half"} : (d.value>0 ? {type:"amount",value:d.value} : null));
-    saveDisc(); closeModal(); render();
-    showToast(anyDisc()?("値引きを適用しました（"+discCount()+"品）"):"値引きなしに設定しました",1500);
+    discounts={};
+    visible().forEach(p=>{
+      const d=draft[p.id]; if(!d) return;
+      if(d.type==="half") discounts[p.id]={type:"half"};
+      else if(d.value>0)  discounts[p.id]={type:"amount", value:d.value};
+    });
+    const ok=saveDisc(); closeModal(); render();
+    if(ok) showToast(anyDisc()?("値引きを適用しました（"+discCount()+"品）"):"値引きなしに設定しました",1500);
   });
   document.getElementById("discClear").addEventListener("click", ()=>{
-    discounts=PRODUCTS.map(()=>null); draft=PRODUCTS.map(()=>({type:"amount",value:0}));
-    drawDraft(); saveDisc(); closeModal(); render(); showToast("すべての値引きを解除しました",1400);
+    discounts={}; draft={};
+    visible().forEach(p=>draft[p.id]={type:"amount",value:0});
+    drawDraft(); const ok=saveDisc(); closeModal(); render();
+    if(ok) showToast("すべての値引きを解除しました",1400);
   });
 
-  /* CSV */
+  /* ===== 設定：商品と金額の編集 ===== */
+  const editEl=document.getElementById("prodEdit");
+  function renderEdit(){
+    editEl.innerHTML = PRODUCTS.length ? PRODUCTS.map((p,i)=>`
+      <div class="erow ${p.on?"":"off"}" data-id="${esc(p.id)}">
+        <div class="ord">
+          <button data-a="up" ${i===0?"disabled":""} aria-label="上へ">↑</button>
+          <button data-a="down" ${i===PRODUCTS.length-1?"disabled":""} aria-label="下へ">↓</button>
+        </div>
+        <div class="ebody">
+          <div class="etop">
+            <input class="ename" type="text" value="${esc(p.name)}" placeholder="商品名" maxlength="20">
+            <span class="cur">¥</span>
+            <input class="eprice" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" value="${p.price}">
+          </div>
+          <div class="esub">
+            <button class="mini tgl ${p.on?"on":"off"}" data-a="tgl">${p.on?"● 有効":"○ 無効"}</button>
+            <button class="mini del" data-a="del">削除</button>
+          </div>
+        </div>
+      </div>`).join("") : `<div class="empty">商品がありません。<br>下の「＋ 商品を追加」から登録してください。</div>`;
+  }
+  // 名前・価格は「確定時」だけ反映（入力中に作り直すとキーボードが閉じるため）
+  editEl.addEventListener("change", e=>{
+    const row=e.target.closest(".erow"); if(!row) return;
+    const p=PRODUCTS.find(x=>x.id===row.dataset.id); if(!p) return;
+    if(e.target.classList.contains("ename")){
+      const v=e.target.value.trim();
+      if(!v){ e.target.value=p.name; showToast("商品名は空にできません",1500,true); return; }
+      p.name=v;
+    } else if(e.target.classList.contains("eprice")){
+      const v=parseInt(String(e.target.value).replace(/[^0-9]/g,""),10);
+      if(isNaN(v)){ e.target.value=p.price; showToast("価格が正しくありません",1500,true); return; }
+      p.price=Math.min(9999,v); e.target.value=p.price;           // 4桁まで
+      if(discounts[p.id]){ delete discounts[p.id]; saveDisc(); }  // 価格を変えたら、その商品の値引きは解除
+    } else return;
+    if(saveProducts()){ buildProducts(); render(); showToast("保存しました",1100); }
+  });
+  editEl.addEventListener("click", e=>{
+    const b=e.target.closest("button[data-a]"); if(!b || b.disabled) return;
+    const id=b.closest(".erow").dataset.id;
+    const i=PRODUCTS.findIndex(x=>x.id===id); if(i<0) return;
+    const a=b.dataset.a;
+    let msg="";
+    if(a==="up" && i>0){ const t=PRODUCTS[i-1]; PRODUCTS[i-1]=PRODUCTS[i]; PRODUCTS[i]=t; }
+    else if(a==="down" && i<PRODUCTS.length-1){ const t=PRODUCTS[i+1]; PRODUCTS[i+1]=PRODUCTS[i]; PRODUCTS[i]=t; }
+    else if(a==="tgl"){
+      const p=PRODUCTS[i];
+      p.on=!p.on;
+      if(!p.on){                                 // 無効にしたら、押していた個数と値引きは戻す
+        counts[id]=0;
+        if(discounts[id]){ delete discounts[id]; saveDisc(); }
+      }
+      // 押したボタンだけ更新する（一覧ごと作り直さない）
+      b.textContent = p.on ? "● 有効" : "○ 無効";
+      b.classList.toggle("on",  p.on);
+      b.classList.toggle("off", !p.on);
+      b.closest(".erow").classList.toggle("off", !p.on);
+      saveProducts(); buildProducts(); render();
+      showToast("「"+p.name+"」を"+(p.on?"有効":"無効")+"にしました",1400);
+      return;
+    }
+    else if(a==="del"){
+      const rec=txns.some(t=>t.items.some(it=>it.name===PRODUCTS[i].name));
+      const msg="「"+PRODUCTS[i].name+"」を商品一覧から削除します。"
+        + (rec ? "\n※ 記録済みの売上はそのまま残ります。" : "")
+        + "\nよろしいですか？";
+      if(!confirm(msg)) return;
+      delete counts[id];
+      if(discounts[id]){ delete discounts[id]; saveDisc(); }
+      PRODUCTS.splice(i,1);
+    } else return;
+    saveProducts(); renderEdit(); buildProducts(); render();
+    if(msg) showToast(msg,1400);
+  });
+  document.getElementById("addProd").addEventListener("click", ()=>{
+    PRODUCTS.push({id:newId(), name:"新しい商品", price:500, on:true});
+    saveProducts(); renderEdit(); buildProducts(); render();
+    const rows=editEl.querySelectorAll(".erow"), last=rows[rows.length-1];
+    if(last){ last.scrollIntoView({block:"nearest"}); const inp=last.querySelector(".ename"); inp.focus(); inp.select(); }
+  });
+  /* ===== CSV ===== */
   function buildCSV(){
     const head=["日付","イベント","会計No","時刻","商品","通常単価","適用単価","単価値引き","個数","金額","会計小計","会計値引き計","会計合計","預り金","おつり"];
     const rows=[head];
@@ -499,7 +697,7 @@
   }
   document.getElementById("exportBtn").addEventListener("click", exportCSV);
 
-  /* 売上 */
+  /* ===== 売上 ===== */
   function renderSales(){
     document.getElementById("grandTotal").textContent=yen(txns.reduce((s,t)=>s+t.total,0));
     document.getElementById("grandCount").textContent=txns.length;
@@ -518,7 +716,7 @@
       const dayDisc=dt.reduce((s,t)=>s+(t.discount||0),0);
       const dayQty=dt.reduce((s,t)=>s+t.items.reduce((a,it)=>a+it.count,0),0);
       const events=[...new Set(dt.map(t=>t.event).filter(Boolean))];
-      const evLabel=events.length?events.join(" / "):"（イベント名なし）";
+      const evLabel=events.length?esc(events.join(" / ")):"（イベント名なし）";
       const agg={};
       dt.forEach(t=>t.items.forEach(it=>{
         const unit=(it.unit!=null?it.unit:it.price);
@@ -526,17 +724,17 @@
         agg[it.name].count+=it.count; agg[it.name].amount+=unit*it.count; agg[it.name].disc+=(it.price-unit)*it.count;
       }));
       const rows=Object.entries(agg).map(([n,v])=>
-        `<tr><td>${n}</td><td><span class="cnt">${v.count}</span> 個${v.disc>0?`<span class="dc">値引-${yen(v.disc)}</span>`:""}</td><td>${yen(v.amount)}</td></tr>`).join("");
+        `<tr><td>${esc(n)}</td><td><span class="cnt">${v.count}</span> 個${v.disc>0?`<span class="dc">値引-${yen(v.disc)}</span>`:""}</td><td>${yen(v.amount)}</td></tr>`).join("");
       const discMeta = dayDisc>0 ? ` ／ <span class="dsc">値引 -${yen(dayDisc)}</span>（定価計 ${yen(dayGross)}）` : "";
       const txnHtml=dt.slice().reverse().map(t=>{
-        const lines=t.items.map(it=>`${it.name}×${it.count}`).join("　");
+        const lines=t.items.map(it=>`${esc(it.name)}×${it.count}`).join("　");
         let drow="";
         if(t.discount>0){
           const detail=t.items.filter(it=>(it.price-(it.unit!=null?it.unit:it.price))>0)
-            .map(it=>`${it.name} -${yen((it.price-it.unit)*it.count)}`).join("　");
+            .map(it=>`${esc(it.name)} -${yen((it.price-it.unit)*it.count)}`).join("　");
           drow=`<div class="drow">値引 合計 -${yen(t.discount)}　（${detail}）</div>`;
         }
-        return `<div class="txn ${t.discount>0?'d':''}"><div class="h"><span class="no">No.${t.id} <span class="time">${t.time}</span></span><span class="amt">${yen(t.total)}</span></div><div class="lines">${lines}　<span>(預${yen(t.received)}/釣${yen(t.change)})</span></div>${drow}</div>`;
+        return `<div class="txn ${t.discount>0?'d':''}"><div class="h"><span class="no">No.${t.id} <span class="time">${t.time}</span></span><span class="r"><span class="amt">${yen(t.total)}</span><button type="button" class="del" data-del="${t.id}" aria-label="この会計を削除">✕</button></span></div><div class="lines">${lines}　<span>(預${yen(t.received)}/釣${yen(t.change)})</span></div>${drow}</div>`;
       }).join("");
       return `<div class="daygroup">
         <div class="dayhead"><span class="date">${fmtDate(date)}</span><span class="ev">${evLabel}</span>
@@ -556,16 +754,28 @@
     return `${y}年${m}月${day}日(${w})`;
   }
 
-  /* タブ切替 */
-  document.querySelector(".tabs").addEventListener("click", e=>{
-    const b=e.target.closest(".tab"); if(!b) return;
-    document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t===b));
-    document.getElementById("pageRegister").classList.toggle("active",b.dataset.tab==="register");
-    document.getElementById("pageSales").classList.toggle("active",b.dataset.tab==="sales");
-    if(b.dataset.tab==="sales") renderSales();
+  /* 会計履歴からの削除 */
+  document.getElementById("dayList").addEventListener("click", e=>{
+    const b=e.target.closest("button[data-del]"); if(!b) return;
+    const id=+b.dataset.del, t=txns.find(x=>x.id===id);
+    if(!t) return;
+    if(!confirm(`No.${id}（${t.time}／${yen(t.total)}）を削除します。\n元に戻せません。よろしいですか？`)) return;
+    txns=txns.filter(x=>x.id!==id);
+    const ok=saveTxns(); renderSales();
+    if(ok) showToast(`No.${id} を削除しました`,1600);
   });
 
-  /* スワイプ（商品⇄電卓）とインジケータ */
+  /* ===== タブ切替 ===== */
+  document.querySelector(".tabs").addEventListener("click", e=>{
+    const b=e.target.closest(".tab"); if(!b) return;
+    const id=b.dataset.tab;
+    document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t===b));
+    document.querySelectorAll(".page").forEach(pg=>pg.classList.toggle("active", pg.dataset.page===id));
+    if(id==="sales") renderSales();
+    if(id==="settings") renderEdit();
+  });
+
+  /* ===== スワイプ（商品⇄電卓）とインジケータ ===== */
   const swiper=document.getElementById("swiper");
   const segs=[...document.querySelectorAll(".seg")];
   let dotRaf=false;
@@ -581,13 +791,26 @@
     swiper.scrollTo({left:ix*swiper.clientWidth, behavior:"smooth"});
   }));
 
+  /* ===== トースト ===== */
   let toastTimer;
-  function showToast(msg,ms=900){
-    const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show");
+  function showToast(msg,ms=900,err=false){
+    const t=document.getElementById("toast");
+    t.classList.remove("act"); t.textContent=msg;
+    t.classList.toggle("err", !!err); t.classList.add("show");
     clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove("show"),ms);
   }
+  /* 取消ボタン付きトースト */
+  function showUndoToast(msg, onUndo, ms=8000){
+    const t=document.getElementById("toast");
+    t.classList.remove("err"); t.classList.add("act");
+    t.innerHTML='<span class="msg"></span><button type="button" class="undo">取消</button>';
+    t.querySelector(".msg").textContent=msg;
+    t.querySelector(".undo").onclick=()=>{ clearTimeout(toastTimer); t.classList.remove("show","act"); onUndo(); };
+    t.classList.add("show");
+    clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove("show","act"),ms);
+  }
 
-  render(); renderSales();
+  buildProducts(); render(); renderSales(); renderEdit();
 
   /* PWA */
   if("serviceWorker" in navigator){
