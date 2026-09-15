@@ -385,14 +385,22 @@
 <script>
   /* ===== 商品マスタ（⚙️設定タブで編集） ===== */
   const DEFAULTS = [
-    {id:"p1", name:"焼うどん", price:600, on:true},
-    {id:"p2", name:"豚バラ",   price:600, on:true},
-    {id:"p3", name:"梅酒",     price:500, on:true},
+    {id:"p1", name:"焼きうどん",     price:600, on:true},
+    {id:"p2", name:"豚バラ串",       price:500, on:true},
+    {id:"p3", name:"あげたこ焼き",   price:600, on:true},
+    {id:"p4", name:"めんちかつ",     price:400, on:true},
+    {id:"p5", name:"からあげ",       price:600, on:true},
+    {id:"p6", name:"じゃじゃ麺",     price:600, on:true},
+    {id:"p7", name:"フランクフルト", price:300, on:true},
+    {id:"p8", name:"ビール",         price:500, on:true},
+    {id:"p9", name:"クラフトビール", price:600, on:true},
   ];
-  const APP_VERSION = "1.5";          // 画面下部に表示。仕様書の版数と揃える
+  const APP_VERSION = "1.6";          // 画面下部に表示。仕様書の版数と揃える
   const STORE  = "regmock_txns_v2";   // 会計履歴（形式は従来どおり）
   const DSTORE = "regmock_disc_v3";   // 値引き（商品IDキー）
-  const PSTORE = "regmock_prods_v1";  // 商品マスタ
+  // v2：初期メニューを9品に入れ替えたため、キーを上げて新しい既定を配る。
+  // 旧 regmock_prods_v1 は消さずに残す（設定を戻したいときの手掛かりとして）。
+  const PSTORE = "regmock_prods_v2";  // 商品マスタ
   const BSTORE = "regmock_backup_v1"; // 最後にCSVへ書き出した記録
 
   const yen = n => "¥" + n.toLocaleString("ja-JP");
