@@ -279,10 +279,6 @@
     border-radius:999px; opacity:0; transition:.25s; pointer-events:none; font-size:15px; z-index:30;}
   .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
   .toast.err{background:var(--warn); color:#fff;}
-  .toast.act{pointer-events:auto; display:flex; align-items:center; gap:14px; padding:9px 10px 9px 20px;}
-  .toast .undo{border:0; background:var(--hz2); color:var(--hz1); font-weight:900; font-size:14px;
-    padding:9px 16px; border-radius:999px; cursor:pointer; white-space:nowrap;}
-  .toast .undo:active{transform:scale(.96);}
 </style>
 </head>
 <body>
@@ -587,20 +583,10 @@
       received, change:received-net
     };
     txns.push(txn);
-    const saved=saveTxns();
-    const snapCounts=Object.assign({},counts), snapRecv=received;
-    if(saved) showUndoToast(`会計完了　おつり ${yen(received-net)}`, ()=>{
-      const ix=txns.findIndex(t=>t.id===txn.id);
-      if(ix<0){ showToast("この会計はすでにありません",1600); return; }
-      txns.splice(ix,1);
-      const ok=saveTxns();
-      // 次の客をまだ打っていなければ、打ち直せるようにカートを戻す
-      if(Object.values(counts).every(v=>!v) && received===0){ counts=Object.assign({},snapCounts); received=snapRecv; }
-      render(); renderSales();
-      if(ok) showToast(`No.${txn.id} の会計を取り消しました`,1800);
-    });
+    // 会計の訂正は売上タブの「✕」で行うため、ここでは結果だけ短く知らせる
+    if(saveTxns()) showToast(`会計完了　おつり ${yen(received-net)}`,1500);
     counts={}; received=0; render(); renderSales();
-    swiper.scrollTo({left:0, behavior:"smooth"});   // 次のお客さん用に商品へ戻る
+    goPage(0);   // 次のお客さん用に商品へ戻る
   });
   /* 取消：電卓の C / AC と同じ挙動。
      1回目＝預り金だけ消す（C）／もう一度押す＝商品の個数も消す（AC）。
@@ -891,11 +877,18 @@
     document.querySelectorAll(".page").forEach(pg=>pg.classList.toggle("active", pg.dataset.page===id));
     if(id==="sales") renderSales();
     if(id==="settings") renderEdit();
+    // レジに戻ったときは必ず商品ページから始める（電卓のまま戻らない）
+    // レジに戻ったときは必ず商品ページから。表示直後はレイアウトが未確定なので、
+    // offsetWidth を読んで確定させてから位置を戻す（rAF に頼らない）。
+    if(id==="register"){ void swiper.offsetWidth; goPage(0); }
   });
 
   /* ===== スワイプ（商品⇄電卓）とインジケータ ===== */
   const swiper=document.getElementById("swiper");
   const segs=[...document.querySelectorAll(".seg")];
+  /* ページ移動。scrollTo({behavior:"smooth"}) は環境によって黙って無視され、
+     切替が効かないことがあるため、確実に反映される scrollLeft 代入で行う。 */
+  function goPage(i){ swiper.scrollLeft = i * swiper.clientWidth; }
   let dotRaf=false;
   swiper.addEventListener("scroll", ()=>{
     if(dotRaf) return; dotRaf=true;
@@ -905,27 +898,15 @@
       dotRaf=false;
     });
   }, {passive:true});
-  segs.forEach((s,ix)=>s.addEventListener("click", ()=>{
-    swiper.scrollTo({left:ix*swiper.clientWidth, behavior:"smooth"});
-  }));
+  segs.forEach((s,ix)=>s.addEventListener("click", ()=>goPage(ix)));
 
   /* ===== トースト ===== */
   let toastTimer;
   function showToast(msg,ms=900,err=false){
     const t=document.getElementById("toast");
-    t.classList.remove("act"); t.textContent=msg;
+    t.textContent=msg;
     t.classList.toggle("err", !!err); t.classList.add("show");
     clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove("show"),ms);
-  }
-  /* 取消ボタン付きトースト */
-  function showUndoToast(msg, onUndo, ms=8000){
-    const t=document.getElementById("toast");
-    t.classList.remove("err"); t.classList.add("act");
-    t.innerHTML='<span class="msg"></span><button type="button" class="undo">取消</button>';
-    t.querySelector(".msg").textContent=msg;
-    t.querySelector(".undo").onclick=()=>{ clearTimeout(toastTimer); t.classList.remove("show","act"); onUndo(); };
-    t.classList.add("show");
-    clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove("show","act"),ms);
   }
 
   /* ===== 画面の高さを実測して反映 =====
