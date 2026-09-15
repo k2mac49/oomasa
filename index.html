@@ -73,19 +73,22 @@
     background:repeating-linear-gradient(45deg,var(--hz1) 0 10px,var(--hz2) 10px 20px);}
   .btn-disc.on .txt{background:var(--hz2); color:var(--hz1); padding:3px 10px; border-radius:6px;}
 
-  .products{flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:8px;}
+  .products{flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:6px;}
   .product{display:flex; align-items:center; justify-content:space-between; gap:10px;
-    background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:8px 12px;}
+    background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:5px 10px;}
   #pageRegister.disc .product.on{border-color:var(--warn);}
   .product .info{min-width:0;}
   .product .name{font-size:19px; font-weight:800; line-height:1.15;}
-  .product .price{font-size:13px; color:var(--sub); line-height:1.2; margin-top:1px;}
+  /* 単価は普段は出さない（小さくて読めず場所を食うため）。値引き中だけ表示する */
+  .product .price{font-size:13px; line-height:1.2; margin-top:1px;}
+  .product .price:empty{display:none;}
   .product .price s{color:#64748b; margin-right:5px;}
   .product .price .now{color:var(--warn); font-weight:800;}
   .ctrl{display:flex; align-items:center; gap:8px;}
   .ctrl .sub{font-size:15px; font-weight:800; min-width:64px; text-align:right;}
-  .ctrl button{width:58px; height:58px; border:1px solid var(--line); background:var(--panel2);
-    color:var(--txt); font-size:30px; border-radius:14px; cursor:pointer; line-height:1;}
+  /* 高さを下げた分は幅で補う（指で押す面積は保ちつつ、1行を低くして品数を稼ぐ） */
+  .ctrl button{width:64px; height:50px; border:1px solid var(--line); background:var(--panel2);
+    color:var(--txt); font-size:30px; border-radius:12px; cursor:pointer; line-height:1;}
   .ctrl button:active{background:var(--keyactive); transform:scale(.94);}
   .ctrl .plus{background:var(--accent2); border-color:var(--accent2); color:#052e16; font-weight:900;}
   .ctrl .count{min-width:42px; text-align:center; font-size:26px; font-weight:800;}
@@ -166,7 +169,7 @@
     .product .name{font-size:23px;}
     .product .price{font-size:15px;}
     .prodhead .ttl .val{font-size:34px;}
-    .ctrl button{width:64px; height:64px; font-size:32px;}
+    .ctrl button{width:72px; height:58px; font-size:32px;}
     .ctrl .count{min-width:48px; font-size:28px;}
   }
 
@@ -230,9 +233,20 @@
 
   /* ===== 設定ページ（商品と金額） ===== */
   #pageSettings{overflow-y:auto; padding:10px; gap:10px;}
-  .ehead{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px 12px;}
-  .ehead h3{font-size:15px; margin-bottom:4px;}
-  .ehead p{font-size:12px; color:var(--sub); line-height:1.55;}
+  /* 設定は項目ごとに開閉する（details/summary。JSなしで動く） */
+  /* flex-shrink:0 … 設定タブは縦並びのflexなので、指定しないとセクションが
+     押し潰され、開いても中身の下半分が切れて届かなくなる */
+  .sect{background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    overflow:hidden; flex-shrink:0;}
+  .sect > summary{list-style:none; cursor:pointer; padding:16px 14px;
+    font-size:16px; font-weight:800; display:flex; align-items:center; gap:10px;}
+  .sect > summary::-webkit-details-marker{display:none;}
+  .sect > summary::after{content:"▼"; margin-left:auto; font-size:12px; color:var(--sub);
+    transition:transform .15s;}
+  .sect[open] > summary::after{transform:rotate(180deg);}
+  .sect > summary:active{background:var(--panel2);}
+  .sectbody{padding:0 12px 14px;}
+  .sectbody .note{font-size:12px; color:var(--sub); line-height:1.55; margin-bottom:12px;}
   .erow{display:flex; gap:8px; background:var(--panel); border:1px solid var(--line);
     border-radius:12px; padding:8px; margin-bottom:8px;}
   .erow.off{opacity:.5;}
@@ -256,7 +270,7 @@
   .erow .mini.del{margin-left:auto; color:var(--warn); border-color:var(--warn);}
   .btn-add{width:100%; background:var(--accent); color:#052e16; border:0; border-radius:10px;
     padding:13px; font-size:15px; font-weight:800; cursor:pointer;}
-  .appinfo{text-align:center; padding:18px 0 6px; color:var(--sub); line-height:1.7;}
+  .appinfo{text-align:center; padding:18px 0 6px; color:var(--sub); line-height:1.7; flex-shrink:0;}
   .appinfo .nm{font-size:13px; font-weight:700;}
   .appinfo .co{font-size:12px; letter-spacing:.10em;}
   .btn-add:active{transform:scale(.99);}
@@ -366,23 +380,27 @@
 
   <!-- 設定 -->
   <div class="page" id="pageSettings" data-page="settings">
-    <div class="ehead">
-      <h3>🍢 商品と金額</h3>
-      <p><b>無効</b>にした商品はレジの一覧に出てきません（削除ではないので、いつでも有効に戻せます）。<br>
-        ここでの変更は<b>次の会計から</b>反映されます。記録済みの売上は変わりません
-        （会計時の商品名・価格がそのまま保存されているため）。<br>
-        価格を変えると、その商品の値引きは自動で解除されます。</p>
-    </div>
-    <div id="prodEdit"></div>
-    <button class="btn-add" id="addProd">＋ 商品を追加</button>
+    <details class="sect">
+      <summary>🏷️ 値引き</summary>
+      <div class="sectbody">
+        <p class="note">商品ごとに単価を下げます。適用すると<b>解除するまで続きます</b>
+          （営業日を変えると自動で解除）。適用中はレジ画面の合計が赤くなり、
+          「値引き中」の印が出ます。</p>
+        <button class="btn-disc" id="discBtn"><span class="txt" id="discBtnTxt">値引きを設定する</span></button>
+      </div>
+    </details>
 
-    <div class="ehead">
-      <h3>🏷️ 値引き</h3>
-      <p>商品ごとに単価を下げます。適用すると<b>解除するまで続きます</b>
-        （営業日を変えると自動で解除）。適用中はレジ画面の合計が赤くなり、
-        「値引き中」の印が出ます。</p>
-    </div>
-    <button class="btn-disc" id="discBtn"><span class="txt" id="discBtnTxt">値引きを設定する</span></button>
+    <details class="sect">
+      <summary>🍢 商品と金額</summary>
+      <div class="sectbody">
+        <p class="note"><b>無効</b>にした商品はレジの一覧に出てきません（削除ではないので、いつでも有効に戻せます）。<br>
+          ここでの変更は<b>次の会計から</b>反映されます。記録済みの売上は変わりません
+          （会計時の商品名・価格がそのまま保存されているため）。<br>
+          価格を変えると、その商品の値引きは自動で解除されます。</p>
+        <div id="prodEdit"></div>
+        <button class="btn-add" id="addProd">＋ 商品を追加</button>
+      </div>
+    </details>
 
     <div class="appinfo">
       <div class="nm">屋台レジ <span id="appVer"></span></div>
@@ -417,7 +435,7 @@
     {id:"p8", name:"ビール",         price:500, on:true},
     {id:"p9", name:"クラフトビール", price:600, on:true},
   ];
-  const APP_VERSION = "1.7";          // 画面下部に表示。仕様書の版数と揃える
+  const APP_VERSION = "1.8";          // 画面下部に表示。仕様書の版数と揃える
   const STORE  = "regmock_txns_v2";   // 会計履歴（形式は従来どおり）
   const DSTORE = "regmock_disc_v3";   // 値引き（商品IDキー）
   // v2：初期メニューを9品に入れ替えたため、キーを上げて新しい既定を配る。
@@ -591,9 +609,10 @@
       row.querySelector(".count").textContent=c;
       row.querySelector(".sub").textContent=yen(c*e);
       row.querySelector('button[data-act="minus"]').disabled = c===0;
+      // 普段は単価を出さない。値引き中だけ「元値→実売」を赤で見せる
       row.querySelector(".price").innerHTML = on
         ? `<s>${yen(p.price)}</s><span class="now">${yen(e)}</span>`
-        : yen(p.price);
+        : "";
       row.classList.toggle("on", on);
       if(c>0) any=true;
     });
