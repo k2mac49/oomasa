@@ -172,6 +172,15 @@
   .card .lbl{font-size:12px; color:var(--sub);}
   .card .big{font-size:24px; font-weight:900; margin-top:2px;}
   .card.total .big{color:var(--accent);}
+  /* バックアップ状態の帯 */
+  .bku{display:flex; align-items:center; gap:8px 14px; flex-wrap:wrap;
+    background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px 12px;}
+  .bku.warn{border-color:var(--warn); background:rgba(239,68,68,.10);}
+  .bku .st{font-size:14px; font-weight:800;}
+  .bku.warn .st{color:var(--warn);}
+  .bku .sub2{font-size:12px; color:var(--sub);}
+  .bku .sub2.ng{color:var(--warn); font-weight:700;}
+
   .act{display:flex; gap:8px; flex-wrap:wrap;}
   .btn-export{flex:1; background:var(--blue); color:#052e16; border:0; border-radius:10px;
     padding:12px; font-size:15px; font-weight:800; cursor:pointer;}
@@ -335,6 +344,7 @@
       <div class="card"><div class="lbl">営業日数</div><div class="big" id="grandDays">0</div></div>
       <div class="card"><div class="lbl">総会計</div><div class="big" id="grandCount">0</div></div>
     </div>
+    <div class="bku" id="bku"></div>
     <div class="act">
       <button class="btn-export" id="exportBtn">⬆ CSVで書き出す／共有</button>
       <button class="danger" id="clearData">全消去</button>
@@ -379,6 +389,7 @@
   const STORE  = "regmock_txns_v2";   // 会計履歴（形式は従来どおり）
   const DSTORE = "regmock_disc_v3";   // 値引き（商品IDキー）
   const PSTORE = "regmock_prods_v1";  // 商品マスタ
+  const BSTORE = "regmock_backup_v1"; // 最後にCSVへ書き出した記録
 
   const yen = n => "¥" + n.toLocaleString("ja-JP");
   const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -407,6 +418,48 @@
     catch(e){ showToast("⚠️ 商品設定を保存できませんでした", 4000, true); return false; }
   }
   function newId(){ return "p"+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+
+  /* ===== 消えたとき取り返しがつかないので、書き出し状況を必ず見せる ===== */
+  let backup = (function(){ try{ return JSON.parse(localStorage.getItem(BSTORE))||{}; }catch(e){ return {}; } })();
+  function saveBackup(){ try{ localStorage.setItem(BSTORE, JSON.stringify(backup)); return true; }catch(e){ return false; } }
+  function unexported(){ const m=backup.lastExportMaxId||0; return txns.filter(t=>(t.id||0)>m); }
+  function markExported(){
+    backup.lastExport=new Date().toISOString();
+    backup.lastExportMaxId=txns.reduce((m,t)=>Math.max(m,t.id||0),0);
+    saveBackup(); renderBackup();
+  }
+
+  /* ブラウザに「このデータを勝手に消さないで」と宣言する。
+     許可されると、容量不足時の自動削除や一定期間未使用での削除を受けにくくなる。 */
+  let persistTxt = "保存の保護：確認中…";
+  let persistNg  = false;
+  async function askPersist(){
+    try{
+      if(!navigator.storage || !navigator.storage.persist){
+        persistTxt="保存の保護：この端末では非対応"; persistNg=true;
+      } else {
+        let ok = await navigator.storage.persisted();
+        if(!ok) ok = await navigator.storage.persist();
+        persistTxt = ok ? "保存の保護：有効" : "保存の保護：未許可（ホーム画面に追加すると有効になりやすい）";
+        persistNg  = !ok;
+      }
+    }catch(e){ persistTxt="保存の保護：不明"; persistNg=true; }
+    renderBackup();
+  }
+
+  function renderBackup(){
+    const el=document.getElementById("bku"); if(!el) return;
+    const un=unexported().length;
+    const d=backup.lastExport?new Date(backup.lastExport):null;
+    const p=x=>String(x).padStart(2,"0");
+    const lastTxt = d ? `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`
+                      : "まだ一度もありません";
+    el.classList.toggle("warn", un>0);
+    el.innerHTML =
+      `<span class="st">${un>0 ? "⚠ 未書き出し "+un+"件" : "✓ すべて書き出し済み"}</span>`
+      + `<span class="sub2">最後の書き出し：${esc(lastTxt)}</span>`
+      + `<span class="sub2 ${persistNg?"ng":""}">${esc(persistTxt)}</span>`;
+  }
 
   function loadTxns(){ try{ return JSON.parse(localStorage.getItem(STORE))||[]; }catch(e){ return []; } }
   function saveTxns(){
@@ -561,7 +614,11 @@
     render();
   });
   document.getElementById("clearData").addEventListener("click", ()=>{
-    if(confirm("すべての売上データを消去します。よろしいですか？")){ txns=[]; saveTxns(); renderSales(); }
+    const un=unexported().length;
+    const msg = "すべての売上データを消去します。\n"
+      + (un>0 ? "★ まだCSVに書き出していない会計が "+un+"件 あります。\n" : "")
+      + "元に戻せません。よろしいですか？";
+    if(confirm(msg)){ txns=[]; saveTxns(); renderSales(); }
   });
 
   /* ===== 値引きモーダル ===== */
@@ -743,13 +800,15 @@
     try{
       const file=new File([blob],fname,{type:"text/csv"});
       if(navigator.canShare && navigator.canShare({files:[file]})){
-        await navigator.share({files:[file], title:"売上データ", text:"レジ 売上データ"}); return;
+        await navigator.share({files:[file], title:"売上データ", text:"レジ 売上データ"});
+        markExported(); return;
       }
     }catch(e){ if(e && e.name==="AbortError") return; }
     const url=URL.createObjectURL(blob);
     const a=document.createElement("a"); a.href=url; a.download=fname;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),1000);
+    markExported();
     showToast("CSVを書き出しました",1400);
   }
   document.getElementById("exportBtn").addEventListener("click", exportCSV);
@@ -761,6 +820,8 @@
     const days=[...new Set(txns.map(t=>t.date))];
     document.getElementById("grandDays").textContent=days.length;
     document.getElementById("tabCount").textContent=txns.length?"("+txns.length+")":"";
+
+    renderBackup();
 
     const list=document.getElementById("dayList");
     if(!txns.length){ list.innerHTML=`<div class="daygroup"><div class="empty">まだ会計がありません</div></div>`; return; }
@@ -888,6 +949,16 @@
   })();
 
   buildProducts(); render(); renderSales(); renderEdit();
+
+  askPersist();
+  // 前回の書き出しから時間が経っていて未書き出しが溜まっていたら、起動時に一度だけ促す
+  setTimeout(()=>{
+    const un=unexported().length; if(!un) return;
+    const d=backup.lastExport?new Date(backup.lastExport).getTime():0;
+    if(Date.now()-d > 20*60*60*1000){
+      showToast("未書き出しの会計が "+un+"件 あります。CSVで書き出してください",5000,true);
+    }
+  },1500);
 
   /* PWA */
   if("serviceWorker" in navigator){
