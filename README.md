@@ -18,7 +18,7 @@ iPhone 1台で完結する、屋台・イベント向けの単一HTMLレジ（PW
 - 商品マスタは端末の localStorage（`regmock_prods_v1`）。初期値は `index.html` の
   `DEFAULTS` 配列（焼うどん600/豚バラ600/梅酒500）で、初回起動時に複製される。
 - 画面（HTML）はネット優先で配信するため、push すれば更新は自動で届く。
-  `sw.js` の `CACHE`（現行 `regi-cache-v10`）はキャッシュを捨てたいときに上げる。
+  `sw.js` の `CACHE`（現行 `regi-cache-v11`）はキャッシュを捨てたいときに上げる。
 
 ## デプロイ
 GitHub Pages（Settings → Pages → Deploy from a branch → main / root）。
