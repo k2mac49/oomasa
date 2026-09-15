@@ -244,6 +244,9 @@
   .erow .mini.del{margin-left:auto; color:var(--warn); border-color:var(--warn);}
   .btn-add{width:100%; background:var(--accent); color:#052e16; border:0; border-radius:10px;
     padding:13px; font-size:15px; font-weight:800; cursor:pointer;}
+  .appinfo{text-align:center; padding:18px 0 6px; color:var(--sub); line-height:1.7;}
+  .appinfo .nm{font-size:13px; font-weight:700;}
+  .appinfo .co{font-size:12px; letter-spacing:.10em;}
   .btn-add:active{transform:scale(.99);}
 
   /* 値引きモーダル */
@@ -359,6 +362,10 @@
     </div>
     <div id="prodEdit"></div>
     <button class="btn-add" id="addProd">＋ 商品を追加</button>
+    <div class="appinfo">
+      <div class="nm">屋台レジ <span id="appVer"></span></div>
+      <div class="co">RazyLab</div>
+    </div>
   </div>
 
   <!-- 値引きモーダル -->
@@ -382,6 +389,7 @@
     {id:"p2", name:"豚バラ",   price:600, on:true},
     {id:"p3", name:"梅酒",     price:500, on:true},
   ];
+  const APP_VERSION = "1.5";          // 画面下部に表示。仕様書の版数と揃える
   const STORE  = "regmock_txns_v2";   // 会計履歴（形式は従来どおり）
   const DSTORE = "regmock_disc_v3";   // 値引き（商品IDキー）
   const PSTORE = "regmock_prods_v1";  // 商品マスタ
@@ -583,8 +591,9 @@
       received, change:received-net
     };
     txns.push(txn);
-    // 会計の訂正は売上タブの「✕」で行うため、ここでは結果だけ短く知らせる
-    if(saveTxns()) showToast(`会計完了　おつり ${yen(received-net)}`,1500);
+    // 会計ごとのバルーンは接客の邪魔になるため出さない。
+    // 保存に失敗したときだけ saveTxns() が赤いトーストで知らせる。
+    saveTxns();
     counts={}; received=0; render(); renderSales();
     goPage(0);   // 次のお客さん用に商品へ戻る
   });
@@ -929,6 +938,7 @@
     fitHeight();
   })();
 
+  document.getElementById("appVer").textContent = "v" + APP_VERSION;
   buildProducts(); render(); renderSales(); renderEdit();
 
   askPersist();

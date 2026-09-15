@@ -1,5 +1,5 @@
 /* 屋台レジ Service Worker：アプリ本体をキャッシュしてオフライン起動 */
-const CACHE = "regi-cache-v13";
+const CACHE = "regi-cache-v14";
 const ASSETS = [
   "./",
   "./index.html",
