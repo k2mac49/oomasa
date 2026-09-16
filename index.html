@@ -66,12 +66,10 @@
   #pageRegister.disc .dscflag{display:inline-block;}
   @keyframes blink{50%{filter:brightness(.72);}}
 
-  /* 設定タブの値引きボタン */
-  .btn-disc{width:100%; border:1px solid var(--hz1); background:var(--bg); color:var(--hz1);
-    padding:13px; font-size:15px; font-weight:800; border-radius:10px; cursor:pointer;}
-  .btn-disc.on{color:var(--hz2);
-    background:repeating-linear-gradient(45deg,var(--hz1) 0 10px,var(--hz2) 10px 20px);}
-  .btn-disc.on .txt{background:var(--hz2); color:var(--hz1); padding:3px 10px; border-radius:6px;}
+  /* 設定タブ：値引きの見出しに出す「値引き中」の印 */
+  .sumflag{font-size:12px; font-weight:900; color:var(--hz2); background:var(--hz1);
+    padding:3px 8px; border-radius:6px; white-space:nowrap;}
+  .sumflag:empty{display:none;}
 
   .products{flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:6px;}
   .product{display:flex; align-items:center; justify-content:space-between; gap:6px;
@@ -239,8 +237,10 @@
   /* 設定は項目ごとに開閉する（details/summary。JSなしで動く） */
   /* flex-shrink:0 … 設定タブは縦並びのflexなので、指定しないとセクションが
      押し潰され、開いても中身の下半分が切れて届かなくなる */
+  /* overflow:clip … 角丸で切り抜きつつ、中の「適用」ボタンを sticky で上に貼り付けるため。
+     hidden だとスクロール容器扱いになり sticky が効かない（非対応端末は hidden のまま） */
   .sect{background:var(--panel); border:1px solid var(--line); border-radius:12px;
-    overflow:hidden; flex-shrink:0;}
+    overflow:hidden; overflow:clip; flex-shrink:0;}
   .sect > summary{list-style:none; cursor:pointer; padding:16px 14px;
     font-size:16px; font-weight:800; display:flex; align-items:center; gap:10px;}
   .sect > summary::-webkit-details-marker{display:none;}
@@ -278,14 +278,8 @@
   .appinfo .co{font-size:12px; letter-spacing:.10em;}
   .btn-add:active{transform:scale(.99);}
 
-  /* 値引きモーダル */
-  .modal-bg{display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:20;
-    align-items:center; justify-content:center; padding:14px;}
-  .modal-bg.on{display:flex;}
-  .modal{background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:16px;
-    width:100%; max-width:440px; max-height:90vh; overflow-y:auto; display:flex; flex-direction:column; gap:10px;}
-  .modal h3{font-size:17px;}
-  .modal p{font-size:12px; color:var(--sub); line-height:1.5;}
+  /* 値引きの編集（設定タブのアコーディオン内） */
+  #discRows{display:flex; flex-direction:column; gap:8px;}
   .prow{border:2px solid var(--line); border-radius:11px; padding:10px 12px;
     display:flex; flex-direction:column; align-items:stretch; gap:9px;}
   .prow.sel{border-color:var(--hz1); background:rgba(245,196,0,.08);}
@@ -300,11 +294,15 @@
   .prow .pv.zero{color:var(--sub);}
   .prow .pv .arw{color:var(--warn); font-weight:800; margin:0 6px; font-size:12px;}
   .prow .pv .res{color:var(--warn);}
-  .modal .apply{height:48px; border:0; border-radius:11px; background:var(--hz1); color:var(--hz2);
-    font-size:15px; font-weight:900; cursor:pointer;}
-  .modal .clear{height:44px; border:1px solid var(--warn); background:transparent; color:var(--warn);
+  /* 適用・解除はいちばん上。商品を下へスクロールしても上に貼り付いて付いてくる */
+  .discact{position:sticky; top:-10px; z-index:2; display:grid; grid-template-columns:1.5fr 1fr; gap:8px;
+    background:var(--panel); padding:10px 0; margin-bottom:4px;}
+  .discact .apply{height:50px; border:0; border-radius:11px; background:var(--hz1); color:var(--hz2);
+    font-size:16px; font-weight:900; cursor:pointer;}
+  .discact .clear{height:50px; border:1px solid var(--warn); background:var(--bg); color:var(--warn);
     font-size:14px; font-weight:800; border-radius:11px; cursor:pointer;}
-  .modal .close{height:38px; border:0; background:transparent; color:var(--sub); font-size:14px; cursor:pointer;}
+  .discact button:active{transform:scale(.98);}
+  #sectDisc .sectbody .note{margin:12px 0 0;}
 
   .toast{position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(18px);
     background:var(--accent); color:#052e16; font-weight:800; padding:12px 22px;
@@ -383,17 +381,22 @@
 
   <!-- 設定 -->
   <div class="page" id="pageSettings" data-page="settings">
-    <details class="sect">
-      <summary>🏷️ 値引き</summary>
+    <details class="sect" id="sectDisc">
+      <summary>🏷️ 値引き <span class="sumflag" id="discSum"></span></summary>
       <div class="sectbody">
-        <p class="note">商品ごとに単価を下げます。適用すると<b>解除するまで続きます</b>
-          （営業日を変えると自動で解除）。適用中はレジ画面の合計が赤くなり、
-          「値引き中」の印が出ます。</p>
-        <button class="btn-disc" id="discBtn"><span class="txt" id="discBtnTxt">値引きを設定する</span></button>
+        <div class="discact">
+          <button class="apply" id="discApply">この内容で適用</button>
+          <button class="clear" id="discClear">すべて解除</button>
+        </div>
+        <div id="discRows"></div>
+        <p class="note">−100で値下げ／＋100で戻す（定価超え・100円未満は不可）。
+          「この内容で適用」を押すまでレジには反映されません。
+          適用すると<b>解除するまで続きます</b>（営業日を変えると自動で解除）。
+          適用中はレジ画面の合計が赤くなり、「値引き中」の印が出ます。</p>
       </div>
     </details>
 
-    <details class="sect">
+    <details class="sect" id="sectProd">
       <summary>🍢 商品と金額</summary>
       <div class="sectbody">
         <p class="note"><b>無効</b>にした商品はレジの一覧に出てきません（削除ではないので、いつでも有効に戻せます）。<br>
@@ -411,17 +414,6 @@
     </div>
   </div>
 
-  <!-- 値引きモーダル -->
-  <div class="modal-bg" id="discModal">
-    <div class="modal">
-      <h3>🏷️ 値引き設定（商品ごと）</h3>
-      <p>商品ごとに単価を設定。<b>−100で値下げ</b>／<b>＋100で戻す</b>（定価超え・0円以下は不可）。適用中は解除するまで継続（営業日を変えると自動解除）。</p>
-      <div id="discRows"></div>
-      <button class="apply" id="discApply">この内容で適用</button>
-      <button class="clear" id="discClear">すべて解除</button>
-      <button class="close" id="discClose">閉じる</button>
-    </div>
-  </div>
 
   <div class="toast" id="toast"></div>
 
@@ -439,7 +431,7 @@
     {id:"p10",name:"サワー",         price:500, on:true},
     {id:"p9", name:"クラフトビール", price:600, on:true},
   ];
-  const APP_VERSION = "1.10";          // 画面下部に表示。仕様書の版数と揃える
+  const APP_VERSION = "1.11";          // 画面下部に表示。仕様書の版数と揃える
   const STORE  = "regmock_txns_v2";   // 会計履歴（形式は従来どおり）
   const DSTORE = "regmock_disc_v3";   // 値引き（商品IDキー）
   // v2：初期メニューを9品に入れ替えたため、キーを上げて新しい既定を配る。
@@ -646,9 +638,7 @@
 
     document.getElementById("pageRegister").classList.toggle("disc", anyDisc());
     document.getElementById("dscFlag").textContent = "値引き中 "+discCount()+"品";
-    const dbtn=document.getElementById("discBtn"), dtxt=document.getElementById("discBtnTxt");
-    dbtn.classList.toggle("on", anyDisc());
-    dtxt.textContent = anyDisc() ? ("値引き中 "+discCount()+"品　変更する") : "値引きを設定する";
+    document.getElementById("discSum").textContent = anyDisc() ? ("値引き中 "+discCount()+"品") : "";
     document.getElementById("resetCart").disabled = !any && received===0;
 
     const change=received-net;
@@ -705,8 +695,7 @@
     if(confirm(msg)){ txns=[]; saveTxns(); renderSales(); }
   });
 
-  /* ===== 値引きモーダル ===== */
-  const modal=document.getElementById("discModal");
+  /* ===== 値引き（設定タブのアコーディオン内で編集） ===== */
   const rowsEl=document.getElementById("discRows");
   function buildDiscRows(){
     const list=visible();
@@ -753,18 +742,15 @@
     else draft[id] = {type:"amount", value:Math.max(0, cur-100)};
     drawDraft();
   });
-  function openModal(){
+  // 編集中の下書きを、いま適用されている値引きから作り直して描画する
+  function resetDraft(){
     draft={};
     visible().forEach(p=>{
       const d=discounts[p.id];
       draft[p.id] = d ? (d.type==="half"?{type:"half"}:{type:"amount",value:d.value}) : {type:"amount",value:0};
     });
-    buildDiscRows(); drawDraft(); modal.classList.add("on");
+    buildDiscRows(); drawDraft();
   }
-  function closeModal(){ modal.classList.remove("on"); }
-  document.getElementById("discBtn").addEventListener("click", openModal);
-  document.getElementById("discClose").addEventListener("click", closeModal);
-  modal.addEventListener("click", e=>{ if(e.target===modal) closeModal(); });
   document.getElementById("discApply").addEventListener("click", ()=>{
     discounts={};
     visible().forEach(p=>{
@@ -772,14 +758,33 @@
       if(d.type==="half") discounts[p.id]={type:"half"};
       else if(d.value>0)  discounts[p.id]={type:"amount", value:d.value};
     });
-    const ok=saveDisc(); closeModal(); render();
+    const ok=saveDisc(); render(); drawDraft();
     if(ok) showToast(anyDisc()?("値引きを適用しました（"+discCount()+"品）"):"値引きなしに設定しました",1500);
   });
   document.getElementById("discClear").addEventListener("click", ()=>{
     discounts={}; draft={};
     visible().forEach(p=>draft[p.id]={type:"amount",value:0});
-    drawDraft(); const ok=saveDisc(); closeModal(); render();
+    drawDraft(); const ok=saveDisc(); render();
     if(ok) showToast("すべての値引きを解除しました",1400);
+  });
+
+  /* 設定のアコーディオン：開いたらすぐ編集できる状態にし、片方を開いたらもう片方は閉じる */
+  const sectDisc=document.getElementById("sectDisc"), sectProd=document.getElementById("sectProd");
+  function scrollSectTop(sect){
+    const pg=document.getElementById("pageSettings");
+    pg.scrollTop += sect.getBoundingClientRect().top - pg.getBoundingClientRect().top - 10;
+  }
+  sectDisc.addEventListener("toggle", ()=>{
+    if(!sectDisc.open) return;
+    sectProd.open=false;
+    resetDraft();          // 開いた瞬間に、いまの値引き状態で編集画面を出す
+    scrollSectTop(sectDisc);
+  });
+  sectProd.addEventListener("toggle", ()=>{
+    if(!sectProd.open) return;
+    sectDisc.open=false;
+    renderEdit();
+    scrollSectTop(sectProd);
   });
 
   /* ===== 設定：商品と金額の編集 ===== */
@@ -974,7 +979,11 @@
     document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t===b));
     document.querySelectorAll(".page").forEach(pg=>pg.classList.toggle("active", pg.dataset.page===id));
     if(id==="sales") renderSales();
-    if(id==="settings") renderEdit();
+    if(id==="settings"){
+      renderEdit();
+      // 開いたまま他タブへ行って戻った場合も、最新の値引き状態で描き直す
+      if(document.getElementById("sectDisc").open) resetDraft();
+    }
     // レジに戻ったときは必ず商品ページから始める（電卓のまま戻らない）
     // レジに戻ったときは必ず商品ページから。表示直後はレイアウトが未確定なので、
     // offsetWidth を読んで確定させてから位置を戻す（rAF に頼らない）。
