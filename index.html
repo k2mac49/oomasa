@@ -74,24 +74,25 @@
   .btn-disc.on .txt{background:var(--hz2); color:var(--hz1); padding:3px 10px; border-radius:6px;}
 
   .products{flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:6px;}
-  .product{display:flex; align-items:center; justify-content:space-between; gap:10px;
-    background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:5px 10px;}
+  .product{display:flex; align-items:center; justify-content:space-between; gap:6px;
+    background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:5px 8px;}
   #pageRegister.disc .product.on{border-color:var(--warn);}
   .product .info{min-width:0;}
-  .product .name{font-size:19px; font-weight:800; line-height:1.15;}
+  /* 小さいiPhone（幅375px）でも1行に6〜7文字入るよう、右側を削って名前に幅を回す */
+  .product .name{font-size:17px; font-weight:800; line-height:1.15;}
   /* 単価は普段は出さない（小さくて読めず場所を食うため）。値引き中だけ表示する */
   .product .price{font-size:13px; line-height:1.2; margin-top:1px;}
   .product .price:empty{display:none;}
   .product .price s{color:#64748b; margin-right:5px;}
   .product .price .now{color:var(--warn); font-weight:800;}
-  .ctrl{display:flex; align-items:center; gap:8px;}
-  .ctrl .sub{font-size:15px; font-weight:800; min-width:64px; text-align:right;}
+  .ctrl{display:flex; align-items:center; gap:4px;}
+  .ctrl .sub{font-size:12px; font-weight:700; color:var(--sub); min-width:44px; text-align:right;}
   /* 高さを下げた分は幅で補う（指で押す面積は保ちつつ、1行を低くして品数を稼ぐ） */
   .ctrl button{width:64px; height:50px; border:1px solid var(--line); background:var(--panel2);
     color:var(--txt); font-size:30px; border-radius:12px; cursor:pointer; line-height:1;}
   .ctrl button:active{background:var(--keyactive); transform:scale(.94);}
   .ctrl .plus{background:var(--accent2); border-color:var(--accent2); color:#052e16; font-weight:900;}
-  .ctrl .count{min-width:42px; text-align:center; font-size:26px; font-weight:800;}
+  .ctrl .count{min-width:30px; text-align:center; font-size:22px; font-weight:800;}
   .ctrl button:disabled{opacity:.35;}
 
   /* 電卓ページ。高さが足りないときはスクロールさせる（キーを隠さない） */
@@ -165,12 +166,14 @@
     .swiper{overflow-x:hidden; scroll-snap-type:none; gap:10px;}
     .slide{flex:1 1 0; width:auto; scroll-snap-align:none;}
     .segs{display:none;}
-    /* 離れた位置から押すので、文字も一回り大きく */
-    .product .name{font-size:23px;}
-    .product .price{font-size:15px;}
+    /* 左右2列なので1列は約395pxしかない。名前が折り返さないよう右側は詰め、
+       ボタンは高さで押しやすさを確保する（1行に7文字程度） */
+    .product .name{font-size:18px;}
+    .product .price{font-size:14px;}
     .prodhead .ttl .val{font-size:34px;}
-    .ctrl button{width:72px; height:58px; font-size:32px;}
-    .ctrl .count{min-width:48px; font-size:28px;}
+    .ctrl button{width:64px; height:58px; font-size:32px;}
+    .ctrl .count{min-width:36px; font-size:24px;}
+    .ctrl .sub{font-size:13px; min-width:50px;}
   }
 
   /* ===== 売上ページ ===== */
@@ -435,7 +438,7 @@
     {id:"p8", name:"ビール",         price:500, on:true},
     {id:"p9", name:"クラフトビール", price:600, on:true},
   ];
-  const APP_VERSION = "1.8";          // 画面下部に表示。仕様書の版数と揃える
+  const APP_VERSION = "1.9";          // 画面下部に表示。仕様書の版数と揃える
   const STORE  = "regmock_txns_v2";   // 会計履歴（形式は従来どおり）
   const DSTORE = "regmock_disc_v3";   // 値引き（商品IDキー）
   // v2：初期メニューを9品に入れ替えたため、キーを上げて新しい既定を配る。
