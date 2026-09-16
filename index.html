@@ -436,15 +436,17 @@
     {id:"p6", name:"じゃじゃ麺",     price:600, on:true},
     {id:"p7", name:"フランクフルト", price:300, on:true},
     {id:"p8", name:"ビール",         price:500, on:true},
+    {id:"p10",name:"サワー",         price:500, on:true},
     {id:"p9", name:"クラフトビール", price:600, on:true},
   ];
-  const APP_VERSION = "1.9";          // 画面下部に表示。仕様書の版数と揃える
+  const APP_VERSION = "1.10";          // 画面下部に表示。仕様書の版数と揃える
   const STORE  = "regmock_txns_v2";   // 会計履歴（形式は従来どおり）
   const DSTORE = "regmock_disc_v3";   // 値引き（商品IDキー）
   // v2：初期メニューを9品に入れ替えたため、キーを上げて新しい既定を配る。
   // 旧 regmock_prods_v1 は消さずに残す（設定を戻したいときの手掛かりとして）。
   const PSTORE = "regmock_prods_v2";  // 商品マスタ
   const BSTORE = "regmock_backup_v1"; // 最後にCSVへ書き出した記録
+  const MSTORE = "regmock_migrations"; // 既定メニュー変更のうち、この端末へ適用済みのもの
 
   const yen = n => "¥" + n.toLocaleString("ja-JP");
   const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -458,6 +460,15 @@
   let txns      = loadTxns();
 
   function loadProducts(){
+    // 既定メニューへの追加は、編集済みの端末にも「1回だけ」反映する。
+    // 適用済みの印を残すので、あとで自分で削除した商品が復活することはない。
+    let done=[];
+    try{ done=JSON.parse(localStorage.getItem(MSTORE))||[]; }catch(e){}
+    const mark=id=>{
+      if(done.includes(id)) return;
+      done.push(id);
+      try{ localStorage.setItem(MSTORE, JSON.stringify(done)); }catch(e){}
+    };
     try{
       const a = JSON.parse(localStorage.getItem(PSTORE));
       if(Array.isArray(a)){
@@ -469,9 +480,19 @@
         // v1.6 で配った「めんちかつ」を正式表記へ。自分で別名に変えた端末は触らない。
         const mk = list.find(p=>p.id==="p4" && p.name==="めんちかつ");
         if(mk) mk.name="メンチカツ";
+        // v1.10：「サワー」をビールの直後へ差し込む（並び替え等の編集はそのまま残す）
+        if(!done.includes("add-sour")){
+          if(!list.some(p=>p.id==="p10")){
+            const i=list.findIndex(p=>p.id==="p8");
+            list.splice(i<0 ? list.length : i+1, 0, {id:"p10", name:"サワー", price:500, on:true});
+            try{ localStorage.setItem(PSTORE, JSON.stringify(list)); }catch(e){}
+          }
+          mark("add-sour");
+        }
         return list;
       }
     }catch(e){}
+    mark("add-sour");   // 既定から始める端末は、最初からサワー入り
     return DEFAULTS.map(p=>({...p}));
   }
   function saveProducts(){
