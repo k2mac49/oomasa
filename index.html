@@ -209,6 +209,20 @@
   .dayhead .sum{margin-left:auto; font-size:18px; font-weight:900; color:var(--accent);}
   .dayhead .meta{font-size:11px; color:var(--sub); width:100%;}
   .dayhead .meta .dsc{color:var(--warn); font-weight:700;}
+  /* 同じ日に複数イベントがあるときの内訳 */
+  .evsum{width:100%; display:flex; flex-direction:column; gap:3px; margin-top:4px;}
+  .evsum .er{display:flex; align-items:baseline; gap:8px; font-size:13px;}
+  .evsum .er .en{color:var(--blue); font-weight:700; flex:1; min-width:0;}
+  .evsum .er .ec{color:var(--sub); font-size:11px;}
+  .evsum .er .ea{font-weight:800;}
+
+  /* 売上タブ：その日のイベントの切り替え */
+  .evchips{flex-basis:100%; display:flex; flex-wrap:wrap; gap:6px;}
+  .evchip{border:1px solid var(--line); background:var(--bg); color:var(--txt); border-radius:999px;
+    padding:8px 14px; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit;}
+  .evchip.on{background:var(--blue); border-color:var(--blue); color:#052e16;}
+  .evadd{border:1px dashed var(--line); background:transparent; color:var(--sub); border-radius:999px;
+    padding:8px 14px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit;}
   .daybody{padding:11px 12px; display:flex; gap:14px; flex-wrap:wrap;}
   .byitem{flex:1; min-width:200px;}
   .byitem h4,.txns h4{margin:0 0 6px; font-size:13px; color:var(--sub);}
@@ -364,7 +378,8 @@
   <div class="page" id="pageSales" data-page="sales">
     <div class="setrow">
       <div class="f"><label>営業日</label><input type="date" id="bizdate"></div>
-      <div class="f" style="flex:1;"><label>イベント</label><input type="text" id="ev" placeholder="例：夏祭り 屋台"></div>
+      <div class="f" style="flex:1;"><label>イベント</label><input type="text" id="ev" placeholder="例：夏祭り 屋台" enterkeyhint="done"></div>
+      <div class="evchips" id="evChips"></div>
     </div>
     <div class="grand">
       <div class="card total"><div class="lbl">総売上</div><div class="big" id="grandTotal">¥0</div></div>
@@ -431,7 +446,7 @@
     {id:"p10",name:"サワー",         price:500, on:true},
     {id:"p9", name:"クラフトビール", price:600, on:true},
   ];
-  const APP_VERSION = "1.11";          // 画面下部に表示。仕様書の版数と揃える
+  const APP_VERSION = "1.12";          // 画面下部に表示。仕様書の版数と揃える
   const STORE  = "regmock_txns_v2";   // 会計履歴（形式は従来どおり）
   const DSTORE = "regmock_disc_v3";   // 値引き（商品IDキー）
   // v2：初期メニューを9品に入れ替えたため、キーを上げて新しい既定を配る。
@@ -439,6 +454,7 @@
   const PSTORE = "regmock_prods_v2";  // 商品マスタ
   const BSTORE = "regmock_backup_v1"; // 最後にCSVへ書き出した記録
   const MSTORE = "regmock_migrations"; // 既定メニュー変更のうち、この端末へ適用済みのもの
+  const ESTORE = "regmock_events_v1";  // 営業日ごとのイベント { "YYYY-MM-DD": { list:[名前…], cur:"選択中" } }
 
   const yen = n => "¥" + n.toLocaleString("ja-JP");
   const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -558,7 +574,99 @@
   bd.addEventListener("change", ()=>{
     if(anyDisc()){ discounts={};
       if(saveDisc()) showToast("営業日変更のため値引きを解除しました",1600); }
+    loadEventUI();         // 営業日に合わせてイベント名も切り替える
     render();
+  });
+
+  /* ===== イベント（営業日ごと。1日に複数あってもよい） =====
+     ・営業日を選ぶと、その日に選択中だったイベント名が入る
+     ・名前を直して確定すると、その日の「そのイベント」の会計記録も同じ名前に直す
+     ・「＋別のイベント」で同じ日に2つ目以降を追加し、ボタンで切り替える */
+  let evMap = (function(){ try{ return JSON.parse(localStorage.getItem(ESTORE))||{}; }catch(e){ return {}; } })();
+  function saveEvents(){
+    try{ localStorage.setItem(ESTORE, JSON.stringify(evMap)); return true; }
+    catch(e){ showToast("⚠️ イベント名を保存できませんでした", 4000, true); return false; }
+  }
+  // その日のイベント一覧と選択中を返す。記録済みの会計にあって一覧にない名前も拾う
+  function eventsFor(date){
+    const e = evMap[date] || {list:[], cur:""};
+    const list = Array.isArray(e.list) ? e.list.filter(Boolean) : [];
+    const dayTx = txns.filter(t=>t.date===date);
+    dayTx.forEach(t=>{ if(t.event && !list.includes(t.event)) list.push(t.event); });
+    let cur = typeof e.cur==="string" ? e.cur : "";
+    if(!evMap[date] && dayTx.length) cur = dayTx[dayTx.length-1].event || "";   // 初めて開く日は最後の会計の名前
+    if(cur && !list.includes(cur)) list.push(cur);
+    return {list, cur};
+  }
+  function currentEvent(){ return eventsFor(bd.value).cur; }
+  function setEvents(date, list, cur){ evMap[date]={list, cur}; return saveEvents(); }
+
+  const evChips = document.getElementById("evChips");
+  function loadEventUI(){
+    const {list, cur} = eventsFor(bd.value);
+    evInput.value = cur;
+    evChips.innerHTML =
+      (list.length>=2 ? list.map(nm=>
+        `<button type="button" class="evchip ${nm===cur?"on":""}" data-ev="${esc(nm)}">${esc(nm)}</button>`).join("") : "")
+      + `<button type="button" class="evadd" id="evAdd">＋ 別のイベント</button>`;
+  }
+
+  // 名前の変更を確定（入力欄から離れたとき／Enter）
+  evInput.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); evInput.blur(); } });
+  evInput.addEventListener("change", ()=>{
+    const date=bd.value; if(!date) return;
+    const {list, cur} = eventsFor(date);
+    const nm = evInput.value.trim();
+    if(nm===cur){ evInput.value=cur; return; }
+    if(!nm){
+      evInput.value=cur;
+      showToast("イベント名は空にできません",1500,true); return;
+    }
+    const hits = txns.filter(t=>t.date===date && (t.event||"")===cur);
+    if(list.includes(nm)){
+      // 同じ日にすでにある名前 → 2つを1つにまとめるかを確認
+      if(!confirm("「"+nm+"」はこの日にすでにあります。\n「"+(cur||"イベント名なし")+"」の会計 "+hits.length+"件 を「"+nm+"」にまとめますか？")){
+        evInput.value=cur; return;
+      }
+    }
+    hits.forEach(t=>t.event=nm);
+    const next = list.filter(x=>x!==cur && x!==nm);
+    const pos = Math.max(0, list.indexOf(cur));
+    next.splice(Math.min(pos, next.length), 0, nm);
+    const ok1 = hits.length ? saveTxns() : true;
+    const ok2 = setEvents(date, next, nm);
+    loadEventUI(); renderSales();
+    if(ok1 && ok2) showToast(hits.length
+      ? "この日の会計 "+hits.length+"件 も「"+nm+"」に変更しました"
+      : "イベント名を「"+nm+"」にしました", 1800);
+  });
+
+  evChips.addEventListener("click", e=>{
+    const date=bd.value; if(!date) return;
+    const chip=e.target.closest("button[data-ev]");
+    if(chip){
+      const {list} = eventsFor(date);
+      setEvents(date, list, chip.dataset.ev);
+      loadEventUI();
+      showToast("「"+chip.dataset.ev+"」に切り替えました。これからの会計はこの名前で記録します",1800);
+      return;
+    }
+    if(e.target.closest("#evAdd")){
+      const {list, cur} = eventsFor(date);
+      const nm = (prompt("この日に追加するイベント名") || "").trim();
+      if(!nm) return;
+      if(list.includes(nm)){ showToast("「"+nm+"」はこの日にすでにあります",1600,true); return; }
+      // 名前のないまま会計していた場合は、先にその分へ名前を付けてもらう
+      if(!cur && txns.some(t=>t.date===date && !t.event)){
+        showToast("先に、いまのイベント名を入力してください（名前なしの会計があります）",2600,true);
+        evInput.focus(); return;
+      }
+      const next = list.slice(); if(cur && !next.includes(cur)) next.push(cur);
+      next.push(nm);
+      setEvents(date, next, nm);
+      loadEventUI();
+      showToast("「"+nm+"」を追加しました。これからの会計はこの名前で記録します",2000);
+    }
   });
 
   /* ===== 金額計算 ===== */
@@ -656,7 +764,7 @@
     const net=items.reduce((s,it)=>s+it.unit*it.count,0);
     const txn={
       id:(txns.reduce((m,t)=>Math.max(m,t.id||0),0))+1,
-      date:bd.value||"未設定", event:evInput.value.trim(),
+      date:bd.value||"未設定", event:currentEvent(),
       time:new Date().toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"}),
       items, subtotal:gross, discount:gross-net, total:net,
       received, change:received-net
@@ -922,8 +1030,15 @@
       const dayGross=dt.reduce((s,t)=>s+(t.subtotal!=null?t.subtotal:t.total),0);
       const dayDisc=dt.reduce((s,t)=>s+(t.discount||0),0);
       const dayQty=dt.reduce((s,t)=>s+t.items.reduce((a,it)=>a+it.count,0),0);
-      const events=[...new Set(dt.map(t=>t.event).filter(Boolean))];
-      const evLabel=events.length?esc(events.join(" / ")):"（イベント名なし）";
+      const evKeys=[...new Set(dt.map(t=>t.event||""))];
+      const events=evKeys.filter(Boolean);
+      const evLabel = evKeys.length>=2 ? "" : (events.length?esc(events[0]):"（イベント名なし）");
+      // 同じ日に複数イベント（または名前なしと混在）なら、イベントごとの小計を出す
+      const evSum = evKeys.length>=2 ? `<div class="evsum">${evKeys.map(k=>{
+        const et=dt.filter(t=>(t.event||"")===k);
+        return `<div class="er"><span class="en">${k?esc(k):"（イベント名なし）"}</span>`
+          + `<span class="ec">会計${et.length}件</span><span class="ea">${yen(et.reduce((a,t)=>a+t.total,0))}</span></div>`;
+      }).join("")}</div>` : "";
       const agg={};
       dt.forEach(t=>t.items.forEach(it=>{
         const unit=(it.unit!=null?it.unit:it.price);
@@ -946,7 +1061,7 @@
       return `<div class="daygroup">
         <div class="dayhead"><span class="date">${fmtDate(date)}</span><span class="ev">${evLabel}</span>
           <span class="sum">${yen(dayTotal)}</span>
-          <span class="meta">会計 ${dt.length}件 ／ 販売 ${dayQty}点${discMeta}</span></div>
+          <span class="meta">会計 ${dt.length}件 ／ 販売 ${dayQty}点${discMeta}</span>${evSum}</div>
         <div class="daybody">
           <div class="byitem"><h4>品目別（実売）</h4><table><tbody>${rows}</tbody></table></div>
           <div class="txns"><h4>会計履歴</h4>${txnHtml}</div>
@@ -1037,7 +1152,7 @@
   })();
 
   document.getElementById("appVer").textContent = "v" + APP_VERSION;
-  buildProducts(); render(); renderSales(); renderEdit();
+  buildProducts(); render(); renderSales(); renderEdit(); loadEventUI();
 
   askPersist();
   // 前回の書き出しから時間が経っていて未書き出しが溜まっていたら、起動時に一度だけ促す
