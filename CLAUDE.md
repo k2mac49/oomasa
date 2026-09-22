@@ -7,18 +7,29 @@ Claude Code 向けの引き継ぎメモ。作業前にこのファイルと `仕
 - 公開：GitHub Pages（https://k2mac49.github.io/oomasa/）。main ブランチの root を配信。
   **push＝公開作業そのもの**。main に入った時点で自動デプロイが走る（約45秒）。
 
-## 作業場所が2つある（最重要）
-- Windows：`C:\DATA\Development\oomasa\repo`
-- Claude Code on the web（クラウドのコンテナ。セッションごとに clone し直す）
+## 作業場所が複数ある／GitHub がハブ（最重要）
+開発する場所が複数あり、**GitHub がそれをつなぐ唯一の経路**。
+どこかのPCで直して push し忘れると、他の場所からはその変更は存在しないのと同じになる。
 
-**どちらで作業する前にも `git pull origin main` を実行すること。**
-2026-09-22 のセッションでは、Windows 側の v1.14〜v1.16 が push されておらず、
-クラウド側が v1.13 を見ている状態から始まった。作業を始める前に版数を突き合わせる：
+- **自宅のWindows** … 普段の開発場所
+- **会社のWindows**（`C:\DATA\Development\oomasa\repo`）… 常に触れるわけではない
+- **Claude Code on the web**（クラウドのコンテナ。セッションごとに clone し直す）
+
+**どこで作業を始めるときも `git pull origin main` から。終わったら push まで。**
+2026-09-22 のセッションは、あるPCの v1.14〜v1.16 が push されておらず、
+クラウド側が v1.13 を見ている状態から始まった。作業前に必ず突き合わせる：
 
 ```
 git log --oneline -1
 grep -o 'APP_VERSION = "[0-9.]*"' index.html
 ```
+
+長く離れていたクローンは差が大きいので、**触る予定がなくても気づいたときに pull しておく**と、
+次に開いたとき衝突処理から始めずに済む。`git status` に `modified:` が出ているときは、
+やりかけの変更が残っているので pull する前に片付けること。
+
+なお**アプリを使うだけなら、どのクローンも関係ない**。
+配信は GitHub Pages なので、実機は main の内容を直接受け取る。
 
 旧 `C:\DATA\Development\oomasa\regi` は Git 管理外のただのフォルダなので使わない
 （`仕様書.md` 冒頭の「Deveropment\oomasa\regi」という記載は古い）。
