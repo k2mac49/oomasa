@@ -177,8 +177,12 @@
   /* ===== カード式（⚙️設定で選択。タブレット横置きのときだけ効く）=====
      横長の画面では、表形式だと商品名と±ボタンが左右に離れて押しにくい。
      カードにして「名前の真下に±」を置き、指の移動を短くする。
-     スマホ（横置きでも高さ440px前後）や縦置きは対象外＝表形式のまま。 */
-  @media (orientation:landscape) and (min-width:900px) and (min-height:560px){
+     スマホ（横置きでも高さ440px前後）や縦置きは対象外＝表形式のまま。
+     高さの条件は下の「商品と電卓を左右に並べる」（760px/700px）と必ず揃える。
+     以前はここだけ 560px だったため、iPad mini を Safari で開くと（高さ約620px）
+     カードは効くのに左右2列にならず、商品が全幅6列＋電卓はスワイプ、という
+     想定していない見え方になっていた。 */
+  @media (orientation:landscape) and (min-width:900px) and (min-height:700px){
     body[data-view="card"] .products{display:grid; grid-template-columns:repeat(auto-fill,minmax(172px,1fr));
       align-content:start; gap:8px;}
     body[data-view="card"] .product{flex-direction:column; align-items:stretch; justify-content:space-between;
@@ -588,7 +592,7 @@
     {id:"p10",name:"サワー",         price:500, on:true},
     {id:"p9", name:"クラフトビール", price:600, on:true},
   ];
-  const APP_VERSION = "1.17";          // 画面下部に表示。仕様書の版数と揃える
+  const APP_VERSION = "1.18";          // 画面下部に表示。仕様書の版数と揃える
   const STORE  = "regmock_txns_v2";   // 会計履歴（形式は従来どおり）
   const DSTORE = "regmock_disc_v3";   // 値引き（商品IDキー）
   // v2：初期メニューを9品に入れ替えたため、キーを上げて新しい既定を配る。
