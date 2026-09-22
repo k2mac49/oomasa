@@ -50,7 +50,12 @@
 
   /* 商品ページ */
   .prodhead{position:sticky; top:0; z-index:3; display:flex; align-items:center; gap:10px; padding:8px 10px; margin-bottom:8px;
-    background:var(--panel); border:1px solid var(--line); border-radius:12px;}
+    background:var(--panel); border:1px solid var(--line); border-radius:12px; flex-wrap:wrap;}
+  /* 商品一覧の高さを食うので、文字も余白もぎりぎりまで詰める。
+     名前を間違えたまま記録し続ける事故を防ぐのが目的で、読めれば足りる */
+  .evbar{flex-basis:100%; display:flex; align-items:center; flex-wrap:wrap; gap:6px; line-height:1;}
+  .evbar .bd{font-size:11px; color:var(--sub); font-weight:700;}
+  .evbar .evname{padding:2px 8px; font-size:12px;}
   .prodhead .ttl{flex:1; display:flex; align-items:baseline; gap:8px;}
   .prodhead .ttl .lbl{font-size:13px; color:var(--sub);}
   .prodhead .ttl .val{font-size:30px; font-weight:900; line-height:1;}
@@ -461,6 +466,8 @@
       <!-- 商品 -->
       <section class="slide">
         <div class="prodhead">
+          <!-- 営業日といまのイベント名。接客中に「どの名前で記録しているか」を見せる -->
+          <div class="evbar" id="evBar"></div>
           <div class="ttl"><span class="lbl">合計</span><span class="val totalVal">¥0</span></div>
           <span class="dscflag" id="dscFlag">値引き中</span>
           <button class="resetbtn" id="resetCart">リセット</button>
@@ -835,8 +842,29 @@
           + `</div>` : "")
       + `</div>`;
   }
+  /* レジ画面のバー。営業日といまのイベント名を出し、名前はタップで直せる。
+     v1.19 で「後から直せる」ようにしたが、それは気づいた後の話。
+     接客中ずっと見えていれば、間違った名前のまま記録し続ける事故そのものが減る。 */
+  const evBar = document.getElementById("evBar");
+  function renderEvBar(){
+    const d=bd.value, cur=d?eventsFor(d).cur:"";
+    const md = d && /^\d{4}-\d{2}-\d{2}$/.test(d) ? (+d.slice(5,7))+"/"+(+d.slice(8,10)) : "日付未設定";
+    evBar.innerHTML = `<span class="bd">${esc(md)}</span>`
+      + `<button type="button" class="evname${cur?"":" none"}" data-evreg="1">`
+      + `${cur?esc(cur):"＋ イベント名を入れる"}</button>`
+      + (evEdit && evEdit.where==="reg" ? evEditorHTML() : "");
+  }
+  evBar.addEventListener("click", e=>{
+    if(evEditorHit(e)) return;
+    if(!e.target.closest("[data-evreg]")) return;
+    if(!bd.value){ showToast("先に売上タブで営業日を選んでください",2200,true); return; }
+    evEdit={where:"reg", date:bd.value, from:eventsFor(bd.value).cur};
+    renderEvBar(); evEditorFocus();
+  });
+  evBar.addEventListener("keydown", evEditorKey);
+
   function evEditorFocus(){ const i=document.getElementById("evedIn"); if(i){ i.focus(); i.select(); } }
-  function evEditorClose(){ evEdit=null; loadEventUI(); renderSales(); }
+  function evEditorClose(){ evEdit=null; loadEventUI(); renderEvBar(); renderSales(); }
 
   // 「＋ 別のイベント」からの追加を確定する
   function evAddCommit(v){
@@ -847,7 +875,7 @@
     const next=list.slice(); if(cur && !next.includes(cur)) next.push(cur);
     next.push(nm);
     setEvents(date, next, nm);
-    evEdit=null; loadEventUI(); renderSales();
+    evEdit=null; loadEventUI(); renderEvBar(); renderSales();
     showToast("「"+nm+"」を追加しました。これからの会計はこの名前で記録します",2000);
   }
   // 売上一覧からの付け替えを確定する
@@ -856,7 +884,7 @@
     if(!renameEvent(date, from, v)) return;   // 空・まとめ取消のときは開いたまま
     evEdit=null;
     if(date===bd.value) loadEventUI();
-    renderSales();
+    renderEvBar(); renderSales();
   }
   function evEditCommit(v){ if(evEdit.where==="add") evAddCommit(v); else evDayCommit(v); }
 
@@ -886,6 +914,7 @@
         `<button type="button" class="evchip ${nm===cur?"on":""}" data-ev="${esc(nm)}">${esc(nm)}</button>`).join("") : "")
       + `<button type="button" class="evadd" id="evAdd">＋ 別のイベント</button>`
       + (evEdit && evEdit.where==="add" ? evEditorHTML() : "");
+    renderEvBar();   // 営業日・イベントの切替をレジ側にも必ず反映する
   }
 
   // 名前の変更を確定（入力欄から離れたとき／Enter）
