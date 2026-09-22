@@ -1368,7 +1368,8 @@
     sumEl.innerHTML = head + `会計 <b>${D.txCount}</b>件　${D.names.length}品目`
       + (D.avg ? "　<b>1日平均</b>で表示" : "");
     el.innerHTML = rows.map(r=>{
-      const v=r[key], pct = tot>0 ? Math.round(v/tot*1000)/10 : 0;
+      // 割合は常に小数1桁。丸めて落とすと 18.8% と 14% が混ざり、縦に並べたとき読みにくい
+      const v=r[key], pct = (tot>0 ? v/tot*100 : 0).toFixed(1);
       return `<div class="rr"><span class="rn"><i style="background:${colorOf(r.k)}"></i>${esc(r.k)}</span>`
         + `<span class="rb"><span style="width:${(v/mx*100).toFixed(1)}%;background:${colorOf(r.k)}"></span></span>`
         + `<span class="rv">${key==="qty"?fmtQ(r.qty):fmtA(r.amt)}`
