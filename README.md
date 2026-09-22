@@ -6,7 +6,7 @@ iPhone 1台で完結する、屋台・イベント向けの単一HTMLレジ（PW
 
 - 公開URL: https://k2mac49.github.io/oomasa/
 - 構成: `index.html`（本体）/ `sw.js`（オフライン）/ `manifest.json` / アイコン
-- ドキュメント: `要件定義書.md` / `仕様書.md`
+- ドキュメント: `要件定義書.md` / `仕様書.md` / `CLAUDE.md`（作業前の引き継ぎメモ）
 
 ## 機能
 - 商品ボタン＋個数で合計自動計算、テンキーで預り金→おつり
