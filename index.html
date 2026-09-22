@@ -160,7 +160,14 @@
   /* ===== 幅の広い画面（タブレット）=====
      商品と電卓を左右に並べる。スワイプ不要になり、
      商品名と＋ボタンの間が間延びするのも解消する。 */
-  @media (min-width:760px) and (min-height:700px){
+  /* 高さ601pxは、上の「横長かつ高さ600px以下＝スマホ横」のちょうど裏返し。
+     以前は700pxだったが、iPad mini 8.3 を Safari で開くと（高さ約620px）
+     タブレットなのにスワイプ構成になり、電卓が別ページへ追いやられていた。
+     601pxまで下げると左右2列になり、下のページ切替バーが消えるぶん
+     テンキーもむしろ大きくなる（1133x624 で 57px → 71px）。
+     600px以下まで下げると電卓2分割と重なって3列になり、
+     クイック入金の「+1000」が切れるため、そこは跨がない。 */
+  @media (min-width:760px) and (min-height:601px){
     .swiper{overflow-x:hidden; scroll-snap-type:none; gap:10px;}
     .slide{flex:1 1 0; width:auto; scroll-snap-align:none;}
     .segs{display:none;}
@@ -177,8 +184,12 @@
   /* ===== カード式（⚙️設定で選択。タブレット横置きのときだけ効く）=====
      横長の画面では、表形式だと商品名と±ボタンが左右に離れて押しにくい。
      カードにして「名前の真下に±」を置き、指の移動を短くする。
-     スマホ（横置きでも高さ440px前後）や縦置きは対象外＝表形式のまま。 */
-  @media (orientation:landscape) and (min-width:900px) and (min-height:560px){
+     スマホ（横置きでも高さ440px前後）や縦置きは対象外＝表形式のまま。
+     高さの条件は上の「商品と電卓を左右に並べる」と必ず同じ値にする。
+     以前はここだけ560px・あちらが700pxと食い違っていたため、その間の高さでは
+     カードは効くのに左右2列にならず、商品が全幅6列＋電卓はスワイプ、という
+     想定していない見え方になっていた（iPad mini 8.3 を Safari で開いた場合）。 */
+  @media (orientation:landscape) and (min-width:900px) and (min-height:601px){
     body[data-view="card"] .products{display:grid; grid-template-columns:repeat(auto-fill,minmax(172px,1fr));
       align-content:start; gap:8px;}
     body[data-view="card"] .product{flex-direction:column; align-items:stretch; justify-content:space-between;
@@ -588,7 +599,7 @@
     {id:"p10",name:"サワー",         price:500, on:true},
     {id:"p9", name:"クラフトビール", price:600, on:true},
   ];
-  const APP_VERSION = "1.17";          // 画面下部に表示。仕様書の版数と揃える
+  const APP_VERSION = "1.18";          // 画面下部に表示。仕様書の版数と揃える
   const STORE  = "regmock_txns_v2";   // 会計履歴（形式は従来どおり）
   const DSTORE = "regmock_disc_v3";   // 値引き（商品IDキー）
   // v2：初期メニューを9品に入れ替えたため、キーを上げて新しい既定を配る。
