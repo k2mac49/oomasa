@@ -200,7 +200,7 @@
   .pick button,.testact button{height:50px; border:1px solid var(--line); background:var(--bg); color:var(--txt);
     border-radius:11px; font-size:15px; font-weight:800; cursor:pointer; font-family:inherit;}
   .pick button.on{background:var(--accent2); border-color:var(--accent2); color:#052e16;}
-  .testact{display:grid; grid-template-columns:1.4fr 1fr; gap:8px; margin-bottom:8px;}
+  .testact{display:grid; grid-template-columns:1fr 1fr 0.8fr; gap:8px; margin-bottom:8px;}
   .testact .add{background:var(--blue); border-color:var(--blue); color:#052e16;}
   .testact .del{color:var(--warn); border-color:var(--warn);}
   .testinfo{font-size:13px; color:var(--sub);}
@@ -214,7 +214,7 @@
     padding:7px 8px; font-size:14px; font-family:inherit; max-width:48vw;}
   .anlctl{display:flex; gap:8px; flex-wrap:wrap;}
   .segbtn{display:flex; border:1px solid var(--line); border-radius:10px; overflow:hidden;}
-  .segbtn button{border:0; background:var(--bg); color:var(--sub); font-size:13px; font-weight:800;
+  .segbtn button{border:0; background:var(--bg); color:var(--sub); font-size:13px; font-weight:800; white-space:nowrap;
     padding:9px 12px; cursor:pointer; font-family:inherit;}
   .segbtn button + button{border-left:1px solid var(--line);}
   .segbtn button.on{background:var(--panel2); color:var(--txt);}
@@ -229,6 +229,25 @@
   .anlsum b{color:var(--txt);}
   .anlcv{position:relative; width:100%;}
   .anlcv canvas{display:block; width:100%; touch-action:manipulation;}
+  /* 商品別合計（横棒） */
+  .rank{display:none; flex-direction:column; gap:6px;}
+  .rank .rr{display:grid; grid-template-columns:minmax(84px,150px) 1fr 10.5em; align-items:center; gap:8px;}
+  .rank .rn{font-size:14px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .rank .rn i{width:10px; height:10px; border-radius:3px; display:inline-block; margin-right:6px;}
+  .rank .rb{height:26px; background:rgba(148,163,184,.08); border-radius:6px; overflow:hidden;}
+  .rank .rb span{display:block; height:100%; border-radius:6px;}
+  .rank .rv{text-align:right; white-space:nowrap; font-size:14px; font-weight:800;}
+  .rank .rv small{display:block; font-size:11px; color:var(--sub); font-weight:700; white-space:normal;}
+  /* スマホ幅：名前と数値を上段、棒を下段に（横3列だと棒の幅がなくなるため） */
+  @media (max-width:600px){
+    .rank{gap:10px;}
+    .rank .rr{grid-template-columns:1fr auto; grid-template-areas:"n v" "b b"; row-gap:4px;}
+    .rank .rn{grid-area:n;} .rank .rv{grid-area:v;} .rank .rb{grid-area:b; height:14px;}
+    .segbtn button{padding:9px 9px;}
+  }
+  .rank .rtot{display:flex; justify-content:space-between; border-top:1px solid var(--line); padding-top:8px;
+    font-size:14px; font-weight:800;}
+  .rank .rtot span:last-child{color:var(--accent);}
   .anldet{font-size:13px; color:var(--sub); min-height:20px;}
   .anldet .hd{color:var(--txt); font-weight:800; margin-bottom:4px;}
   .anldet table{width:100%; border-collapse:collapse;}
@@ -456,18 +475,25 @@
     </div>
     <div class="anl" id="anl">
       <div class="anlhead">
-        <span class="t">📈 時間帯別の売上</span>
+        <span class="t">📈 売上の分析</span>
+        <div class="segbtn" id="anlScope"><button data-v="day">日別</button><button data-v="event">イベント全体</button></div>
         <select id="anlDate" aria-label="日付"></select>
         <select id="anlEv" aria-label="イベント"></select>
       </div>
       <div class="anlctl">
+        <div class="segbtn" id="anlView"><button data-v="rank">商品別合計</button><button data-v="stack">積み上げ</button><button data-v="total">時間帯合計</button><button data-v="heat">ヒートマップ</button></div>
+        <div class="segbtn" id="anlAgg"><button data-v="sum">合計</button><button data-v="avg">1日平均</button></div>
+      </div>
+      <div class="anlctl">
         <div class="segbtn" id="anlBin"><button data-v="10">10分</button><button data-v="30">30分</button><button data-v="60">1時間</button></div>
         <div class="segbtn" id="anlMet"><button data-v="amt">金額</button><button data-v="qty">個数</button></div>
-        <div class="segbtn" id="anlLine"><button data-v="cum">累計線</button><button data-v="bin">区間計線</button><button data-v="off">線なし</button></div>
+        <div class="segbtn" id="anlLine"><button data-v="cum">累計線あり</button><button data-v="off">線なし</button></div>
+        <div class="segbtn" id="anlNorm"><button data-v="all">色：全体基準</button><button data-v="row">色：商品ごと</button></div>
       </div>
       <div class="anlchips" id="anlChips"></div>
       <div class="anlsum" id="anlSum"></div>
       <div class="anlcv"><canvas id="anlCv"></canvas></div>
+      <div class="rank" id="anlRank"></div>
       <div class="anldet" id="anlDet"></div>
     </div>
     <div id="dayList"></div>
@@ -517,11 +543,13 @@
     <details class="sect" id="sectTest">
       <summary>🧪 テストデータ</summary>
       <div class="sectbody">
-        <p class="note">グラフや分析の検討用に、<b>2026年1月1日 8:00〜15:00</b> の架空の売上（約250会計）を入れます。
+        <p class="note">グラフや分析の検討用に、架空の売上を入れます。1日分は <b>2026年1月1日 8:00〜15:00</b>（241会計）。
+          3日分は、それに 1/2（9:00〜14:30）と 1/3（10:00〜15:00）を加えます（イベント全体・1日平均の確認用）。
           イベント名は「テストデータ」。売上一覧・総売上・CSVには出ますが、「未書き出し」の件数には数えません。
           下の「削除」でテストデータだけをまとめて消せます（本物の会計には触りません）。</p>
         <div class="testact">
-          <button type="button" class="add" id="testAdd">テストデータを入れる</button>
+          <button type="button" class="add" id="testAdd">1日分（1/1）</button>
+          <button type="button" class="add" id="testAdd3">3日分（1/1〜1/3）</button>
           <button type="button" class="del" id="testDel">削除</button>
         </div>
         <div class="testinfo" id="testInfo"></div>
@@ -551,7 +579,7 @@
     {id:"p10",name:"サワー",         price:500, on:true},
     {id:"p9", name:"クラフトビール", price:600, on:true},
   ];
-  const APP_VERSION = "1.13";          // 画面下部に表示。仕様書の版数と揃える
+  const APP_VERSION = "1.16";          // 画面下部に表示。仕様書の版数と揃える
   const STORE  = "regmock_txns_v2";   // 会計履歴（形式は従来どおり）
   const DSTORE = "regmock_disc_v3";   // 値引き（商品IDキー）
   // v2：初期メニューを9品に入れ替えたため、キーを上げて新しい既定を配る。
@@ -1139,24 +1167,35 @@
   document.getElementById("exportBtn").addEventListener("click", exportCSV);
 
   /* ===== 売上：時間帯グラフ =====
-     指定した日（とイベント）の会計を 10分／30分／1時間 の枠で集計し、
-     商品別の積み上げ棒＋折れ線（累計 or 区間計）で描く。外部ライブラリは使わない（オフラインで動かすため）。
-     ・金額は実売（値引き後）。個数表示にも切り替え可。
-     ・商品は凡例をタップで表示／非表示。折れ線も「表示中の商品」だけで計算する。
-     ・時刻は会計記録の "HH:MM"（分単位）。枠の区切りは「8:00〜8:30」＝8:00以上8:30未満。 */
-  const PALETTE=["#22c55e","#38bdf8","#f59e0b","#ef4444","#a78bfa","#f472b6","#14b8a6","#facc15",
-                 "#fb923c","#60a5fa","#a3e635","#e879f9"];
+     範囲は2通り：
+       日別　　　　… 1日（＋その日のイベント）の会計
+       イベント全体 … 同じイベント名の会計を全日程まとめ、時刻（時:分）で重ねる。合計 or 1日平均
+     表示は3通り：積み上げ棒（商品別）／合計棒（単色）／ヒートマップ（商品×時間帯）。
+     ・集計枠は 10分／30分／1時間（8:00〜8:30 ＝ 8:00以上8:30未満）。時刻は会計記録の "HH:MM"。
+     ・金額は実売（値引き後）。個数にも切替可。
+     ・凡例タップで商品の表示／非表示。累計線と右目盛りは常に全商品で、その範囲の最終累計から固定。
+     ・1日平均は「その時間帯に営業していた日数」で割る（各日の最初〜最後の会計の枠を営業中とみなす）。
+     ・外部ライブラリは使わない（オフラインで動かすため）。 */
+  /* 色は Tableau 10 系（隣り合っても見分けやすいよう色相と明るさを交互に振った配色）を
+     暗い背景向けに少し明るくしたもの。商品マスタの並び順で割り当てる。11品目以降は明るい版で折り返す。 */
+  const PALETTE=["#5a8fd6","#f28e2b","#e15759","#76b7b2","#59a14f","#edc948","#b07aa1","#ff9da7","#b08968","#bab0ac",
+                 "#a0cbe8","#ffbe7d","#8cd17d","#f1ce63","#d4a6c8","#86bcb6"];
   let anl = (function(){
     let a={}; try{ a=JSON.parse(localStorage.getItem(ASTORE))||{}; }catch(e){}
     return { bin:[10,30,60].includes(a.bin)?a.bin:30, met:a.met==="qty"?"qty":"amt",
-             line:["cum","bin","off"].includes(a.line)?a.line:"cum",
-             hidden:new Set(Array.isArray(a.hidden)?a.hidden:[]), date:"", ev:"*", sel:-1 };
+             line:a.line==="off"?"off":"cum",   // 旧「区間計」は累計に読み替え
+             view:["rank","stack","total","heat"].includes(a.view)?a.view:"rank",
+             agg:a.agg==="avg"?"avg":"sum", norm:a.norm==="row"?"row":"all",
+             hidden:new Set(Array.isArray(a.hidden)?a.hidden:[]),
+             scope:"day", date:"", ev:"*", evAll:"", sel:-1 };
   })();
   function saveAnl(){
-    try{ localStorage.setItem(ASTORE, JSON.stringify({bin:anl.bin, met:anl.met, line:anl.line, hidden:[...anl.hidden]})); }catch(e){}
+    try{ localStorage.setItem(ASTORE, JSON.stringify({bin:anl.bin, met:anl.met, line:anl.line, view:anl.view,
+      agg:anl.agg, norm:anl.norm, hidden:[...anl.hidden]})); }catch(e){}
   }
   const tmin = s => { const m=/^(\d{1,2}):(\d{2})/.exec(String(s||"")); return m ? (+m[1])*60+(+m[2]) : null; };
   const hhmm = n => Math.floor(n/60)+":"+String(n%60).padStart(2,"0");
+  const evName = v => v || "（イベント名なし）";
   // 色は商品名ごとに固定（日付を変えても同じ商品は同じ色）
   function colorOf(name){
     const names=[]; PRODUCTS.forEach(p=>{ if(!names.includes(p.name)) names.push(p.name); });
@@ -1164,15 +1203,24 @@
     const i=names.indexOf(name);
     return i<PALETTE.length ? PALETTE[i] : `hsl(${(i*67)%360} 70% 60%)`;
   }
-  const shortV = v => anl.met==="qty" ? String(v)
-    : (v>=10000 ? "¥"+(v/10000).toFixed(v%10000===0?0:1)+"万" : "¥"+v.toLocaleString("ja-JP"));
+  // 1日平均は小数になるので、表示だけ丸める
+  const fmtA = v => yen(Math.round(v));
+  const fmtQ = v => (Math.round(v*10)/10).toLocaleString("ja-JP")+"個";
+  const fmtV = v => anl.met==="qty" ? fmtQ(v) : fmtA(v);
+  // 目盛り・マス用の数値。「万」などは使わず全桁をカンマ区切りで出す（億まで売ることはない前提）
+  const shortV = v => anl.met==="qty" ? String(Math.round(v*10)/10) : "¥"+Math.round(v).toLocaleString("ja-JP");
+  const cellV  = v => anl.met==="qty" ? String(Math.round(v*10)/10) : Math.round(v).toLocaleString("ja-JP");
 
-  function anlTx(){ return txns.filter(t=>t.date===anl.date && (anl.ev==="*" || (t.event||"")===anl.ev)); }
+  function anlTx(){
+    if(anl.scope==="event") return txns.filter(t=>(t.event||"")===anl.evAll);
+    return txns.filter(t=>t.date===anl.date && (anl.ev==="*" || (t.event||"")===anl.ev));
+  }
   function anlData(){
     const dt=anlTx().filter(t=>tmin(t.time)!=null);
     if(!dt.length) return null;
     const B=anl.bin, mins=dt.map(t=>tmin(t.time));
     const start=Math.floor(Math.min(...mins)/B)*B, end=Math.floor(Math.max(...mins)/B)*B+B, n=(end-start)/B;
+    const dates=[...new Set(dt.map(t=>t.date))].sort();
     // 並び順は商品マスタの順（消した商品は後ろ）
     const names=[];
     PRODUCTS.forEach(p=>{ if(dt.some(t=>t.items.some(it=>it.name===p.name))) names.push(p.name); });
@@ -1184,48 +1232,124 @@
       t.items.forEach(it=>{ const u=(it.unit!=null?it.unit:it.price);
         amt[it.name][i]+=u*it.count; qty[it.name][i]+=it.count; });
     });
-    return {start, end, n, B, names, amt, qty, tc, txCount:dt.length};
+    // 1日平均：時間帯ごとに「営業していた日数」で割る
+    const avg = anl.scope==="event" && anl.agg==="avg" && dates.length>=2;
+    const open=Array(n).fill(0);
+    dates.forEach(d=>{
+      const ms=dt.filter(t=>t.date===d).map(t=>tmin(t.time));
+      const a=Math.floor((Math.min(...ms)-start)/B), b=Math.floor((Math.max(...ms)-start)/B);
+      for(let i=a;i<=b;i++) open[i]++;
+    });
+    // 平均化する前の総額・総数（1日平均＝総額÷日数 の表示用）
+    const raw={amt:0, qty:0}; names.forEach(k=>{ raw.amt+=amt[k].reduce((a,b)=>a+b,0); raw.qty+=qty[k].reduce((a,b)=>a+b,0); });
+    if(avg){
+      for(let i=0;i<n;i++){ const o=open[i]||1;
+        names.forEach(k=>{ amt[k][i]/=o; qty[k][i]/=o; }); tc[i]/=o; }
+    }
+    return {start, end, n, B, names, amt, qty, tc, txCount:dt.length, dates, avg, open, raw};
   }
 
   const anlCv=document.getElementById("anlCv");
   let anlLast=null, anlGeom=null;
+  function segOn(id, cur){ document.querySelectorAll("#"+id+" button").forEach(b=>b.classList.toggle("on", b.dataset.v===cur)); }
   function renderAnl(){
-    // 日付の候補（会計のある日）。選択中が無くなっていたら、営業日→最新日の順で選び直す
-    const days=[...new Set(txns.map(t=>t.date))].sort().reverse();
     const dSel=document.getElementById("anlDate"), eSel=document.getElementById("anlEv");
-    if(!days.includes(anl.date)) anl.date = days.includes(bd.value) ? bd.value : (days[0]||"");
-    dSel.innerHTML = days.length ? days.map(d=>`<option value="${esc(d)}" ${d===anl.date?"selected":""}>${esc(fmtDate(d))}</option>`).join("")
-                                 : `<option>（データなし）</option>`;
-    const evs=[...new Set(txns.filter(t=>t.date===anl.date).map(t=>t.event||""))];
-    if(anl.ev!=="*" && !evs.includes(anl.ev)) anl.ev="*";
-    eSel.innerHTML = `<option value="*">すべてのイベント</option>` + evs.map(v=>
-      `<option value="${esc(v)}" ${v===anl.ev?"selected":""}>${esc(v||"（イベント名なし）")}</option>`).join("");
-    eSel.style.display = evs.length>=2 ? "" : "none";
-
-    ["anlBin","anlMet","anlLine"].forEach(id=>{
-      const cur = id==="anlBin"?String(anl.bin) : id==="anlMet"?anl.met : anl.line;
-      document.querySelectorAll("#"+id+" button").forEach(b=>b.classList.toggle("on", b.dataset.v===cur));
-    });
+    const days=[...new Set(txns.map(t=>t.date))].sort().reverse();
+    const allEvs=[...new Set(txns.map(t=>t.event||""))];
+    if(anl.scope==="event"){
+      // イベント全体：イベント名で選ぶ（日付は使わない）
+      if(!allEvs.includes(anl.evAll)){
+        const cur=currentEvent(); anl.evAll = allEvs.includes(cur) ? cur : (allEvs.length?allEvs[0]:"");
+      }
+      dSel.style.display="none";
+      eSel.style.display = allEvs.length ? "" : "none";
+      eSel.innerHTML = allEvs.map(v=>{
+        const ds=new Set(txns.filter(t=>(t.event||"")===v).map(t=>t.date)).size;
+        return `<option value="${esc(v)}" ${v===anl.evAll?"selected":""}>${esc(evName(v))}（${ds}日）</option>`; }).join("");
+    } else {
+      if(!days.includes(anl.date)) anl.date = days.includes(bd.value) ? bd.value : (days[0]||"");
+      dSel.style.display="";
+      dSel.innerHTML = days.length ? days.map(d=>`<option value="${esc(d)}" ${d===anl.date?"selected":""}>${esc(fmtDate(d))}</option>`).join("")
+                                   : `<option>（データなし）</option>`;
+      const evs=[...new Set(txns.filter(t=>t.date===anl.date).map(t=>t.event||""))];
+      if(anl.ev!=="*" && !evs.includes(anl.ev)) anl.ev="*";
+      eSel.innerHTML = `<option value="*">すべてのイベント</option>` + evs.map(v=>
+        `<option value="${esc(v)}" ${v===anl.ev?"selected":""}>${esc(evName(v))}</option>`).join("");
+      eSel.style.display = evs.length>=2 ? "" : "none";
+    }
 
     const D=anlData(); anlLast=D;
     if(D && anl.sel>=D.n) anl.sel=-1;
+
+    segOn("anlScope", anl.scope); segOn("anlView", anl.view); segOn("anlBin", String(anl.bin));
+    segOn("anlMet", anl.met); segOn("anlLine", anl.line); segOn("anlAgg", anl.agg); segOn("anlNorm", anl.norm);
+    const isRank = anl.view==="rank";
+    document.getElementById("anlBin").style.display  = isRank ? "none" : "";
+    document.getElementById("anlLine").style.display = (anl.view==="heat"||isRank) ? "none" : "";
+    document.getElementById("anlCv").style.display   = isRank ? "none" : "";
+    document.getElementById("anlDet").style.display  = isRank ? "none" : "";
+    document.getElementById("anlRank").style.display = isRank ? "flex" : "none";
+    document.getElementById("anlNorm").style.display = anl.view==="heat" ? "" : "none";
+    document.getElementById("anlAgg").style.display  = (anl.scope==="event" && D && D.dates.length>=2) ? "" : "none";
+
     const chips=document.getElementById("anlChips");
+    chips.style.display = (anl.view==="total"||isRank||anl.view==="heat") ? "none" : "";   // 凡例は積み上げだけ
     chips.innerHTML = D ? D.names.map(k=>
       `<button type="button" class="anlchip ${anl.hidden.has(k)?"off":""}" data-k="${esc(k)}"><i style="background:${colorOf(k)}"></i>${esc(k)}</button>`).join("")
       + `<button type="button" class="anlchip all" data-all="1">${D.names.every(k=>!anl.hidden.has(k))?"すべて隠す":"すべて表示"}</button>` : "";
 
     const sumEl=document.getElementById("anlSum");
-    if(!D){ sumEl.textContent="この日の会計はありません"; drawAnl(); drawAnlDet(); return; }
+    if(!D){ sumEl.textContent = anl.scope==="event" ? "このイベントの会計はありません" : "この日の会計はありません";
+      drawAnl(); drawAnlDet(); return; }
     const src = anl.met==="qty" ? D.qty : D.amt;
-    const vis = D.names.filter(k=>!anl.hidden.has(k));
+    if(isRank){ drawRank(D); return; }
+    const vis = anl.view==="stack" ? D.names.filter(k=>!anl.hidden.has(k)) : D.names;
     const binTot = Array.from({length:D.n},(_,i)=>vis.reduce((s,k)=>s+src[k][i],0));
     const tot = binTot.reduce((a,b)=>a+b,0);
     let pk=0; binTot.forEach((v,i)=>{ if(v>binTot[pk]) pk=i; });
-    sumEl.innerHTML = `${hhmm(D.start)}〜${hhmm(D.end)}　会計 <b>${D.txCount}</b>件　`
-      + `${anl.met==="qty"?"販売":"売上"} <b>${anl.met==="qty"?tot+"個":yen(tot)}</b>`
+    const md=d=>{ const [,m,dd]=d.split("-").map(Number); return m+"/"+dd; };
+    const head = anl.scope==="event"
+      ? `${esc(evName(anl.evAll))}　${D.dates.length}日間${D.dates.length>=2?`（${md(D.dates[0])}〜${md(D.dates[D.dates.length-1])}）`:""}　`
+      : "";
+    sumEl.innerHTML = head + `${hhmm(D.start)}〜${hhmm(D.end)}　会計 <b>${D.txCount}</b>件　`
+      + (D.avg
+          ? `${anl.met==="qty"?"販売":"売上"} 1日平均 <b>${fmtV((anl.met==="qty"?D.raw.qty:D.raw.amt)/D.dates.length)}</b>`
+          : `${anl.met==="qty"?"販売":"売上"} <b>${fmtV(tot)}</b>`)
       + (vis.length<D.names.length ? `（表示中の${vis.length}品）` : "")
-      + (tot>0 ? `　ピーク <b>${hhmm(D.start+pk*D.B)}〜${hhmm(D.start+(pk+1)*D.B)}</b>（${anl.met==="qty"?binTot[pk]+"個":yen(binTot[pk])}）` : "");
+      + (tot>0 ? `　ピーク <b>${hhmm(D.start+pk*D.B)}〜${hhmm(D.start+(pk+1)*D.B)}</b>（${fmtV(binTot[pk])}）` : "")
+      + (D.avg ? `<br>※1日平均は、時間帯ごとに「その時間に営業していた日数」で割っています。
+          そのため累計線の終点は、上の1日平均（全日程の合計÷日数）より大きくなります。` : "");
     drawAnl(); drawAnlDet();
+  }
+
+  /* 商品別合計：その範囲（1日 or イベント全体）の商品ごとの合計を多い順の横棒で。
+     金額／個数は切替に従う。1日平均のときは 総額÷日数。構成比は全商品に対する割合。
+     時間軸を使わないので、集計単位・累計線・凡例の表示切替は使わない（全商品を出す）。 */
+  function drawRank(D){
+    const el=document.getElementById("anlRank"), sumEl=document.getElementById("anlSum");
+    const dt=anlTx(), div = D.avg ? D.dates.length : 1;
+    const agg={}; D.names.forEach(k=>agg[k]={amt:0, qty:0, disc:0});
+    dt.forEach(t=>t.items.forEach(it=>{ const u=(it.unit!=null?it.unit:it.price), a=agg[it.name]; if(!a) return;
+      a.amt+=u*it.count; a.qty+=it.count; a.disc+=(it.price-u)*it.count; }));
+    const key = anl.met==="qty" ? "qty" : "amt";
+    const rows = D.names.map(k=>({k, amt:agg[k].amt/div, qty:agg[k].qty/div, disc:agg[k].disc/div}))
+                        .sort((a,b)=>b[key]-a[key]);
+    const tA=rows.reduce((s,r)=>s+r.amt,0), tQ=rows.reduce((s,r)=>s+r.qty,0), tot=key==="qty"?tQ:tA;
+    const mx=Math.max(1e-9,...rows.map(r=>r[key]));
+    const md=d=>{ const [,m,dd]=d.split("-").map(Number); return m+"/"+dd; };
+    const head = anl.scope==="event"
+      ? `${esc(evName(anl.evAll))}　${D.dates.length}日間${D.dates.length>=2?`（${md(D.dates[0])}〜${md(D.dates[D.dates.length-1])}）`:""}　`
+      : "";
+    sumEl.innerHTML = head + `会計 <b>${D.txCount}</b>件　${D.names.length}品目`
+      + (D.avg ? "　<b>1日平均</b>で表示" : "");
+    el.innerHTML = rows.map(r=>{
+      const v=r[key], pct = tot>0 ? Math.round(v/tot*1000)/10 : 0;
+      return `<div class="rr"><span class="rn"><i style="background:${colorOf(r.k)}"></i>${esc(r.k)}</span>`
+        + `<span class="rb"><span style="width:${(v/mx*100).toFixed(1)}%;background:${colorOf(r.k)}"></span></span>`
+        + `<span class="rv">${key==="qty"?fmtQ(r.qty):fmtA(r.amt)}`
+        + `<small>${key==="qty"?fmtA(r.amt):fmtQ(r.qty)}・${pct}%${r.disc>0?`・値引 -${fmtA(r.disc)}`:""}</small></span></div>`;
+    }).join("")
+      + `<div class="rtot"><span>合計${D.avg?"（1日平均）":""}</span><span>${fmtQ(tQ)}　${fmtA(tA)}</span></div>`;
   }
 
   // 目盛りの刻みを 1・2・5 ×10^n に丸める（¥1.3万 のような半端な目盛りを出さない）
@@ -1236,96 +1360,193 @@
   }
   function drawAnl(){
     const W=anlCv.parentElement.clientWidth; if(!W) return;   // 売上タブが隠れているときは描かない
+    const D=anlLast; anlGeom=null;
+    if(anl.view==="rank") return;
+    if(D && anl.view==="heat") return drawHeat(W, D);
     const H = W>=700 ? 340 : 280, dpr=window.devicePixelRatio||1;
     anlCv.width=Math.round(W*dpr); anlCv.height=Math.round(H*dpr); anlCv.style.height=H+"px";
     const g=anlCv.getContext("2d"); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,W,H);
-    const D=anlLast; anlGeom=null;
     g.font="12px -apple-system,'Hiragino Kaku Gothic ProN',sans-serif";
-    if(!D){ g.fillStyle="#94a3b8"; g.textAlign="center"; g.fillText("データがありません",W/2,H/2); return; }
+    if(!D){ g.fillStyle="#94a3b8"; g.textAlign="center"; g.textBaseline="middle"; g.fillText("データがありません",W/2,H/2); return; }
 
     const src = anl.met==="qty" ? D.qty : D.amt;
-    const vis = D.names.filter(k=>!anl.hidden.has(k));
+    const isTotal = anl.view==="total";
+    const vis = isTotal ? D.names : D.names.filter(k=>!anl.hidden.has(k));
     const binTot = Array.from({length:D.n},(_,i)=>vis.reduce((s,k)=>s+src[k][i],0));
-    const cum=[]; binTot.reduce((a,v,i)=>(cum[i]=a+v),0);
+    // 累計線は表示・非表示に関係なく常に全商品の合算
+    const allTot = Array.from({length:D.n},(_,i)=>D.names.reduce((s,k)=>s+src[k][i],0));
+    const cum=[]; allTot.reduce((a,v,i)=>(cum[i]=a+v),0);
     const useR = anl.line==="cum";
-    const L=48, R=useR?52:10, T=14, Bm=26, pw=W-L-R, ph=H-T-Bm;
-    // 左の刻みで目盛り数 N を決め、右（累計）も同じ N 本の横線にそろえる
+    // 左（棒）：集計単位ごとの最大に合わせて刻む
     const rawL=Math.max(1,...binTot), stepL=niceStep(rawL/4), N=Math.max(1,Math.ceil(rawL/stepL));
-    const yMax=stepL*N, rMax=niceStep(Math.max(1,cum[cum.length-1]||0)/N)*N;
+    const yMax=stepL*N;
+    // 右（累計）：その範囲の最終累計で決めて固定。集計単位・表示商品・左の目盛りでは動かない
+    const dayTot=Math.max(1,cum[cum.length-1]||0), stepR=niceStep(dayTot/4), NR=Math.max(1,Math.ceil(dayTot/stepR)), rMax=stepR*NR;
+    // 余白は目盛りの文字幅から決める（全桁表示なので桁数で幅が変わる）
+    const L=Math.ceil(g.measureText(shortV(yMax)).width)+12;
+    const R=useR ? Math.ceil(g.measureText(shortV(rMax)).width)+14 : 10;
+    const T=14, Bm=26, pw=W-L-R, ph=H-T-Bm;
     const Y=v=>T+ph-(v/yMax)*ph, YR=v=>T+ph-(v/rMax)*ph;
     const bw=pw/D.n, gap=Math.max(1,Math.min(6,bw*0.18));
-    anlGeom={L,pw,bw,n:D.n};
+    anlGeom={x0:L, cw:bw, n:D.n};
 
-    // 目盛り（左＝棒、右＝累計）
     g.textBaseline="middle";
     for(let i=0;i<=N;i++){
       const v=yMax*i/N, y=Y(v);
       g.strokeStyle= i===0 ? "#64748b" : "rgba(148,163,184,.18)"; g.lineWidth=1;
       g.beginPath(); g.moveTo(L,Math.round(y)+.5); g.lineTo(L+pw,Math.round(y)+.5); g.stroke();
-      g.fillStyle="#94a3b8"; g.textAlign="right"; g.fillText(shortV(Math.round(v)),L-6,y);
-      if(useR){ g.fillStyle="#f1f5f9"; g.textAlign="left"; g.fillText(shortV(Math.round(rMax*i/N)),L+pw+6,y); }
+      g.fillStyle="#94a3b8"; g.textAlign="right"; g.fillText(shortV(v),L-6,y);
     }
-    // 選択中の枠
+    if(useR){   // 右目盛りは独自の刻み。横線は引かず、軸の小さな目盛りだけ付ける
+      g.strokeStyle="#94a3b8"; g.fillStyle="#f1f5f9"; g.textAlign="left";
+      g.beginPath(); g.moveTo(L+pw+.5,T); g.lineTo(L+pw+.5,T+ph); g.stroke();
+      for(let i=0;i<=NR;i++){
+        const y=Math.round(YR(stepR*i))+.5;
+        g.beginPath(); g.moveTo(L+pw,y); g.lineTo(L+pw+4,y); g.stroke();
+        g.fillText(shortV(stepR*i),L+pw+7,y);
+      }
+    }
     if(anl.sel>=0){ g.fillStyle="rgba(56,189,248,.14)"; g.fillRect(L+anl.sel*bw,T,bw,ph); }
-    // 積み上げ棒（下から商品マスタ順）
     for(let i=0;i<D.n;i++){
-      let base=0; const x=L+i*bw+gap/2, w=Math.max(1,bw-gap);
+      const x=L+i*bw+gap/2, w=Math.max(1,bw-gap);
+      if(isTotal){   // 合計棒：単色
+        if(binTot[i]>0){ g.fillStyle="#5a8fd6"; g.fillRect(x,Y(binTot[i]),w,Y(0)-Y(binTot[i])); }
+        continue;
+      }
+      let base=0; const seams=[];
       vis.forEach(k=>{
         const v=src[k][i]; if(!v) return;
         const y0=Y(base), y1=Y(base+v);
         g.fillStyle=colorOf(k); g.fillRect(x,y1,w,y0-y1);
+        if(base>0) seams.push(y0);
         base+=v;
       });
+      // 商品の境目：背景色の細線で区切る（色が近くても段が分かるように）
+      if(seams.length){
+        g.strokeStyle="#0f172a"; g.lineWidth=1.5; g.beginPath();
+        seams.forEach(y=>{ g.moveTo(x,y); g.lineTo(x+w,y); }); g.stroke(); g.lineWidth=1;
+      }
     }
-    // 時刻ラベル（毎正時。1時間枠で幅が狭いときは間引く）
-    g.textBaseline="top"; g.textAlign="center"; g.fillStyle="#94a3b8";
-    const step = Math.max(1, Math.ceil(44/((60/D.B)*bw)));   // ラベル同士が重ならない間隔（約44px）
-    for(let m=Math.ceil(D.start/60)*60, c=0; m<=D.end; m+=60, c++){
-      if(c%step) continue;
-      const x=L+((m-D.start)/D.B)*bw;
-      g.strokeStyle="#64748b"; g.beginPath(); g.moveTo(Math.round(x)+.5,T+ph); g.lineTo(Math.round(x)+.5,T+ph+4); g.stroke();
-      g.fillText(hhmm(m),Math.min(Math.max(x,L+14),L+pw-14),T+ph+7);
-    }
-    // 折れ線：累計（右目盛り・枠の終わりの時点）／区間計（左目盛り・枠の中央）
-    if(anl.line!=="off"){
-      const pts = anl.line==="cum"
-        ? [[L,YR(0)], ...cum.map((v,i)=>[L+(i+1)*bw, YR(v)])]
-        : binTot.map((v,i)=>[L+(i+.5)*bw, Y(v)]);
+    drawTimeAxis(g, D, L, bw, T+ph, pw);
+    if(useR){   // 全商品の累計（枠の終わりの時点）
+      const pts = [[L,YR(0)], ...cum.map((v,i)=>[L+(i+1)*bw, YR(v)])];
       g.strokeStyle="#f1f5f9"; g.lineWidth=2; g.lineJoin="round"; g.beginPath();
       pts.forEach(([x,y],i)=> i?g.lineTo(x,y):g.moveTo(x,y)); g.stroke();
       if(bw>=10){ g.fillStyle="#f1f5f9"; pts.forEach(([x,y])=>{ g.beginPath(); g.arc(x,y,2.6,0,Math.PI*2); g.fill(); }); }
+      g.lineWidth=1;
     }
   }
+  // 時刻ラベル（毎正時。狭いときは約44px間隔になるよう間引く）
+  function drawTimeAxis(g, D, x0, cw, yAxis, pw){
+    g.textBaseline="top"; g.textAlign="center"; g.fillStyle="#94a3b8"; g.strokeStyle="#64748b"; g.lineWidth=1;
+    const step = Math.max(1, Math.ceil(44/((60/D.B)*cw)));
+    for(let m=Math.ceil(D.start/60)*60, c=0; m<=D.end; m+=60, c++){
+      if(c%step) continue;
+      const x=x0+((m-D.start)/D.B)*cw;
+      g.beginPath(); g.moveTo(Math.round(x)+.5,yAxis); g.lineTo(Math.round(x)+.5,yAxis+4); g.stroke();
+      g.fillText(hhmm(m),Math.min(Math.max(x,x0+14),x0+pw-14),yAxis+7);
+    }
+  }
+
+  /* ヒートマップ：横＝時間帯、縦＝商品、色＝金額 or 個数。
+     色は温度のイメージで 青（少ない）→ 水色 → 黄 → 橙 → 赤（多い）。ColorBrewer の RdYlBu を反転したもの。
+     色の基準は「全体」（全マスの最大が赤）か「商品ごと」（各商品の最大＝その商品のピークが赤）。0 のマスは塗らない。
+     凡例ボタンは使わない（常に全商品を出す）。 */
+  const HEAT=[[69,117,180],[116,173,209],[171,217,233],[254,224,144],[253,174,97],[244,109,67],[215,48,39]];
+  function heatColor(t){
+    t=Math.max(0,Math.min(1,t))*(HEAT.length-1);
+    const i=Math.min(HEAT.length-2,Math.floor(t)), f=t-i, a=HEAT[i], b=HEAT[i+1];
+    return [0,1,2].map(j=>Math.round(a[j]+(b[j]-a[j])*f));
+  }
+  // マスの明るさで文字色を変える（明るい黄色系には黒、濃い青・赤には白）
+  const heatInk = c => (0.299*c[0]+0.587*c[1]+0.114*c[2]) > 150 ? "#0f172a" : "#ffffff";
+  function drawHeat(W, D){
+    const src = anl.met==="qty" ? D.qty : D.amt;
+    const rows = D.names;
+    const g0=anlCv.getContext("2d");
+    g0.font="bold 13px -apple-system,'Hiragino Kaku Gothic ProN',sans-serif";
+    const L=Math.min(W>=700?150:100, Math.max(60, ...rows.map(k=>g0.measureText(k).width+14)));
+    g0.font="bold 12px -apple-system,sans-serif";
+    const R=Math.ceil(Math.max(...rows.map(k=>g0.measureText(shortV(src[k].reduce((a,b)=>a+b,0))).width)))+10;
+    const T=6, Bm=26, rh = W>=700 ? 30 : 26;
+    const H=T+Math.max(1,rows.length)*rh+Bm, dpr=window.devicePixelRatio||1;
+    anlCv.width=Math.round(W*dpr); anlCv.height=Math.round(H*dpr); anlCv.style.height=H+"px";
+    const g=anlCv.getContext("2d"); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,W,H);
+    const pw=W-L-R, cw=pw/D.n;
+    anlGeom={x0:L, cw, n:D.n};
+    if(!rows.length){ g.fillStyle="#94a3b8"; g.font="12px sans-serif"; g.textAlign="center"; g.textBaseline="middle";
+      g.fillText("表示する商品がありません",W/2,H/2); return; }
+    const gmax=Math.max(1e-9,...rows.map(k=>Math.max(...src[k])));
+    rows.forEach((k,r)=>{
+      const y=T+r*rh, rmax=Math.max(1e-9,...src[k]), mx = anl.norm==="row" ? rmax : gmax;
+      // 行ラベル（商品名＋色）
+      g.font="bold 13px -apple-system,'Hiragino Kaku Gothic ProN',sans-serif"; g.textBaseline="middle";
+      // 商品の色の印は出さない（温度色と混同するため）。名前だけ
+      g.fillStyle="#f1f5f9"; g.textAlign="left";
+      let nm=k; while(g.measureText(nm+(nm===k?"":"…")).width>L-12 && nm.length>1) nm=nm.slice(0,-1);
+      g.fillText(nm===k?k:nm+"…",4,y+rh/2);
+      // マス
+      g.fillStyle="rgba(148,163,184,.06)"; g.fillRect(L,y+1,pw,rh-2);
+      for(let i=0;i<D.n;i++){
+        const v=src[k][i]; if(!(v>0)) continue;
+        const c=heatColor(v/mx);
+        g.fillStyle=`rgb(${c[0]},${c[1]},${c[2]})`;
+        g.fillRect(L+i*cw+.5, y+1, Math.max(1,cw-1), rh-2);
+        // 数値は全桁。マスの幅に収まるときだけ出す（収まらないときは列タップの内訳で見る）
+        g.font="11px -apple-system,sans-serif"; g.textAlign="center";
+        const txt=cellV(v);
+        if(g.measureText(txt).width <= cw-4){ g.fillStyle=heatInk(c); g.fillText(txt, L+(i+.5)*cw, y+rh/2); }
+      }
+      // 行合計
+      const sum=src[k].reduce((a,b)=>a+b,0);
+      g.font="bold 12px -apple-system,sans-serif"; g.textAlign="right"; g.fillStyle="#cbd5e1";
+      g.fillText(shortV(sum), W-4, y+rh/2);
+    });
+    if(anl.sel>=0){ g.strokeStyle="#38bdf8"; g.lineWidth=2; g.strokeRect(L+anl.sel*cw+1, T+1, cw-2, rows.length*rh-2); g.lineWidth=1; }
+    g.font="12px -apple-system,'Hiragino Kaku Gothic ProN',sans-serif";
+    drawTimeAxis(g, D, L, cw, T+rows.length*rh, pw);
+  }
+
   function drawAnlDet(){
     const el=document.getElementById("anlDet"), D=anlLast;
     if(!D){ el.innerHTML=""; return; }
-    if(anl.sel<0){ el.textContent="棒をタップすると、その時間帯の内訳を表示します"; return; }
+    if(anl.sel<0){ el.textContent = anl.view==="heat" ? "列（時間帯）をタップすると、その時間帯の内訳を表示します"
+                                                      : "棒をタップすると、その時間帯の内訳を表示します"; return; }
     const i=anl.sel, a=D.start+i*D.B;
-    const vis=D.names.filter(k=>!anl.hidden.has(k));
+    const vis = anl.view==="stack" ? D.names.filter(k=>!anl.hidden.has(k)) : D.names;
     const sumA=vis.reduce((s,k)=>s+D.amt[k][i],0), sumQ=vis.reduce((s,k)=>s+D.qty[k][i],0);
-    let cumA=0; for(let j=0;j<=i;j++) cumA+=vis.reduce((s,k)=>s+D.amt[k][j],0);
+    let cumA=0; for(let j=0;j<=i;j++) cumA+=D.names.reduce((s,k)=>s+D.amt[k][j],0);   // 累計は常に全商品
     const rows=D.names.filter(k=>D.qty[k][i]>0).map(k=>
-      `<tr class="${anl.hidden.has(k)?"off":""}"><td><i style="background:${colorOf(k)}"></i>${esc(k)}</td><td>${D.qty[k][i]}個</td><td>${yen(D.amt[k][i])}</td></tr>`).join("");
-    el.innerHTML = `<div class="hd">${hhmm(a)}〜${hhmm(a+D.B)}　会計 ${D.tc[i]}件　${sumQ}個　${yen(sumA)}`
-      + `<span style="color:var(--sub);font-weight:700">（この時点の累計 ${yen(cumA)}）</span></div>`
+      `<tr class="${anl.view==="stack"&&anl.hidden.has(k)?"off":""}"><td><i style="background:${colorOf(k)}"></i>${esc(k)}</td><td>${fmtQ(D.qty[k][i])}</td><td>${fmtA(D.amt[k][i])}</td></tr>`).join("");
+    el.innerHTML = `<div class="hd">${hhmm(a)}〜${hhmm(a+D.B)}${D.avg?`（1日平均・${D.open[i]}日分）`:""}　`
+      + `会計 ${Math.round(D.tc[i]*10)/10}件　${fmtQ(sumQ)}　${fmtA(sumA)}`
+      + `<span style="color:var(--sub);font-weight:700">（全商品の累計 ${fmtA(cumA)}）</span></div>`
       + (rows ? `<table><tbody>${rows}</tbody></table>` : "この時間帯の会計はありません");
   }
 
   anlCv.addEventListener("click", e=>{
     if(!anlGeom) return;
     const r=anlCv.getBoundingClientRect(), x=e.clientX-r.left;
-    const i=Math.floor((x-anlGeom.L)/anlGeom.bw);
-    anl.sel = (i<0||i>=anlGeom.n||i===anl.sel) ? -1 : i;   // 同じ棒をもう一度で解除
+    const i=Math.floor((x-anlGeom.x0)/anlGeom.cw);
+    anl.sel = (i<0||i>=anlGeom.n||i===anl.sel) ? -1 : i;   // 同じところをもう一度で解除
     drawAnl(); drawAnlDet();
   });
   document.getElementById("anlDate").addEventListener("change", e=>{ anl.date=e.target.value; anl.ev="*"; anl.sel=-1; renderAnl(); });
-  document.getElementById("anlEv").addEventListener("change", e=>{ anl.ev=e.target.value; anl.sel=-1; renderAnl(); });
-  document.querySelector(".anlctl").addEventListener("click", e=>{
-    const b=e.target.closest("button[data-v]"); if(!b) return;
+  document.getElementById("anlEv").addEventListener("change", e=>{
+    if(anl.scope==="event") anl.evAll=e.target.value; else anl.ev=e.target.value;
+    anl.sel=-1; renderAnl();
+  });
+  document.getElementById("anl").addEventListener("click", e=>{
+    const b=e.target.closest(".segbtn button[data-v]"); if(!b) return;
     const id=b.parentElement.id, v=b.dataset.v;
-    if(id==="anlBin"){ anl.bin=+v; anl.sel=-1; }
+    if(id==="anlScope"){ anl.scope=v; anl.sel=-1; }
+    else if(id==="anlView") anl.view=v;
+    else if(id==="anlBin"){ anl.bin=+v; anl.sel=-1; }
     else if(id==="anlMet") anl.met=v;
-    else anl.line=v;
+    else if(id==="anlLine") anl.line=v;
+    else if(id==="anlAgg") anl.agg=v;
+    else if(id==="anlNorm") anl.norm=v;
+    else return;
     saveAnl(); renderAnl();
   });
   document.getElementById("anlChips").addEventListener("click", e=>{
@@ -1340,13 +1561,20 @@
   });
   let anlRz; window.addEventListener("resize", ()=>{ clearTimeout(anlRz); anlRz=setTimeout(drawAnl,150); });
 
-  /* ===== テストデータ（2026-01-01 8:00〜15:00） =====
+  /* ===== テストデータ =====
+     1日分：2026-01-01 8:00〜15:00（従来どおり・同じ内容）
+     3日分：上記＋1/2（9:00〜14:30・やや少なめ）＋1/3（10:00〜15:00・少なめ）。イベント全体・1日平均の確認用。
      毎回同じ内容になるよう、乱数は種を固定。会計には test:true を付け、まとめて削除できるようにする。
-     想定：元日の初詣客。昼に山、13時台に谷、14時前に2つ目の山。10:40と13:50に団体（ムラ）。
-     仕掛け：焼きうどんは13:20に品切れ／14:15から からあげ −100円 の値引き。 */
-  const TEST_DATE="2026-01-01", TEST_EV="テストデータ";
-  function makeTestTxns(){
-    let seed=1;
+     1/1の想定：元日の初詣客。昼に山、13時台に谷、14時前に2つ目の山。10:40と13:50に団体（ムラ）。
+     仕掛け（1/1のみ）：焼きうどん13:20品切れ／14:15から からあげ −100円。 */
+  const TEST_EV="テストデータ";
+  const TEST_DAYS=[
+    {date:"2026-01-01", seed:1,  from:480, to:900, scale:1.0,  special:true},
+    {date:"2026-01-02", seed:2,  from:540, to:870, scale:0.8,  special:false},
+    {date:"2026-01-03", seed:3,  from:600, to:900, scale:0.65, special:false},
+  ];
+  function makeTestTxns(o, startId){
+    let seed=o.seed;
     const rnd=()=>{ seed|=0; seed=seed+0x6D2B79F5|0; let t=Math.imul(seed^seed>>>15,1|seed);
       t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; };
     const poisson=l=>{ const L=Math.exp(-l); let k=0,p=1; do{ k++; p*=rnd(); }while(p>L); return k-1; };
@@ -1359,17 +1587,19 @@
     const lam=m=>{ for(let i=1;i<curve.length;i++){ const [a,va]=curve[i-1],[b,vb]=curve[i];
       if(m<=b) return va+(vb-va)*(m-a)/(b-a); } return .2; };
     const blk={}; for(let b=480;b<900;b+=10) blk[b]=0.75+rnd()*0.5;      // 10分ごとのムラ（±25%）
-    const out=[]; let id=nextId();
-    for(let m=480;m<900;m++){
-      let l=lam(m)*blk[Math.floor(m/10)*10];
-      if(m>=640&&m<650) l+=1.2;           // 10:40 団体
-      if(m>=830&&m<838) l+=0.9;           // 13:50 団体
-      if(m>=770&&m<780) l*=0.35;          // 12:50 仕込み待ちで一時停滞
+    const out=[]; let id=startId;
+    for(let m=o.from;m<o.to;m++){
+      let l=lam(m)*blk[Math.floor(m/10)*10]*o.scale;
+      if(o.special){
+        if(m>=640&&m<650) l+=1.2;           // 10:40 団体
+        if(m>=830&&m<838) l+=0.9;           // 13:50 団体
+        if(m>=770&&m<780) l*=0.35;          // 12:50 仕込み待ちで一時停滞
+      }
       const k=poisson(l);
       for(let c=0;c<k;c++){
         const w=M.map(([n,,b])=>{
           let x=b;
-          if(n==="焼きうどん"&&m>=800) return 0;                           // 13:20 品切れ
+          if(o.special&&n==="焼きうどん"&&m>=800) return 0;                // 13:20 品切れ
           if((n==="焼きうどん"||n==="じゃじゃ麺")&&m>=660&&m<810) x*=1.8; // 昼
           if(n==="フランクフルト"&&m<600) x*=1.6;
           if(ALC.has(n)) x*= m<600?0.3 : m<780?1.4 : 2.0;
@@ -1386,36 +1616,39 @@
         const items=picked.map(ix=>{
           const [name,price]=M[ix], q=rnd();
           const count = ALC.has(name) ? (q<.75?1:2) : (q<.7?1 : q<.92?2 : 3);
-          const unit = (name==="からあげ"&&m>=855) ? price-100 : price;    // 14:15〜 値引き
+          const unit = (o.special&&name==="からあげ"&&m>=855) ? price-100 : price;    // 14:15〜 値引き
           return {name,price,count,unit};
         });
         const gross=items.reduce((s,it)=>s+it.price*it.count,0), net=items.reduce((s,it)=>s+it.unit*it.count,0);
         const q=rnd();
         const received = q<.3 ? net : q<.8 ? Math.ceil(net/1000)*1000 : (net<=5000?(q<.93?5000:10000):10000);
-        out.push({id:id++, date:TEST_DATE, event:TEST_EV, time:hhmm(m).padStart(5,"0"), items,
+        out.push({id:id++, date:o.date, event:TEST_EV, time:hhmm(m).padStart(5,"0"), items,
           subtotal:gross, discount:gross-net, total:net, received, change:received-net, test:true});
       }
     }
     return out;
   }
   function drawTestInfo(){
-    const t=txns.filter(x=>x.test);
+    const t=txns.filter(x=>x.test), ds=new Set(t.map(x=>x.date)).size;
     document.getElementById("testInfo").textContent = t.length
-      ? `いま入っているテストデータ：${t.length}件 ／ ${yen(t.reduce((s,x)=>s+x.total,0))}`
+      ? `いま入っているテストデータ：${ds}日分 ${t.length}件 ／ ${yen(t.reduce((s,x)=>s+x.total,0))}`
       : "テストデータは入っていません";
     document.getElementById("testDel").disabled = !t.length;
   }
-  document.getElementById("testAdd").addEventListener("click", ()=>{
-    const has=txns.some(t=>t.test);
-    if(has && !confirm("テストデータはすでに入っています。入れ直しますか？")) return;
+  function addTest(nDays){
+    if(txns.some(t=>t.test) && !confirm("テストデータはすでに入っています。入れ直しますか？")) return;
     txns=txns.filter(t=>!t.test);
-    const add=makeTestTxns();
+    let id=nextId(), add=[];
+    TEST_DAYS.slice(0,nDays).forEach(o=>{ const a=makeTestTxns(o,id); id+=a.length; add=add.concat(a); });
     txns=txns.concat(add);
     const ok=saveTxns();
-    anl.date=TEST_DATE; anl.ev="*"; anl.sel=-1;
+    anl.date=TEST_DAYS[0].date; anl.ev="*"; anl.evAll=TEST_EV; anl.sel=-1;
+    anl.scope = nDays>1 ? "event" : "day";
     renderSales(); drawTestInfo();
-    if(ok) showToast(`テストデータ ${add.length}件 を入れました（売上タブのグラフで確認）`,2200);
-  });
+    if(ok) showToast(`テストデータ ${nDays}日分 ${add.length}件 を入れました（売上タブのグラフで確認）`,2200);
+  }
+  document.getElementById("testAdd").addEventListener("click", ()=>addTest(1));
+  document.getElementById("testAdd3").addEventListener("click", ()=>addTest(3));
   document.getElementById("testDel").addEventListener("click", ()=>{
     const n=txns.filter(t=>t.test).length; if(!n) return;
     if(!confirm(`テストデータ ${n}件 を削除します。本物の会計はそのまま残ります。`)) return;
