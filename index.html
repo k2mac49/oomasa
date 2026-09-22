@@ -50,7 +50,12 @@
 
   /* 商品ページ */
   .prodhead{position:sticky; top:0; z-index:3; display:flex; align-items:center; gap:10px; padding:8px 10px; margin-bottom:8px;
-    background:var(--panel); border:1px solid var(--line); border-radius:12px;}
+    background:var(--panel); border:1px solid var(--line); border-radius:12px; flex-wrap:wrap;}
+  /* 商品一覧の高さを食うので、文字も余白もぎりぎりまで詰める。
+     名前を間違えたまま記録し続ける事故を防ぐのが目的で、読めれば足りる */
+  .evbar{flex-basis:100%; display:flex; align-items:center; flex-wrap:wrap; gap:6px; line-height:1;}
+  .evbar .bd{font-size:11px; color:var(--sub); font-weight:700;}
+  .evbar .evname{padding:2px 8px; font-size:12px;}
   .prodhead .ttl{flex:1; display:flex; align-items:baseline; gap:8px;}
   .prodhead .ttl .lbl{font-size:13px; color:var(--sub);}
   .prodhead .ttl .val{font-size:30px; font-weight:900; line-height:1;}
@@ -305,11 +310,32 @@
   /* 同じ日に複数イベントがあるときの内訳 */
   .evsum{width:100%; display:flex; flex-direction:column; gap:3px; margin-top:4px;}
   .evsum .er{display:flex; align-items:baseline; gap:8px; font-size:13px;}
-  .evsum .er .en{color:var(--blue); font-weight:700; flex:1; min-width:0;}
+  .evsum .er .en{color:var(--blue); font-weight:700; flex:1; min-width:0; text-align:left;
+    background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:3px 8px;
+    font-size:13px; font-family:inherit; cursor:pointer;}
+  .evsum .er .en.none{border-style:dashed; color:var(--sub); font-weight:600;}
   .evsum .er .ec{color:var(--sub); font-size:11px;}
   .evsum .er .ea{font-weight:800;}
 
   /* 売上タブ：その日のイベントの切り替え */
+  /* イベント名はその場で直せる。売上を見ていて「名前が入っていない」と
+     気づいた場所で、営業日を選び直さずに直せるようにするため */
+  .evname{border:1px solid var(--line); background:var(--bg); color:var(--blue); font-weight:700;
+    border-radius:999px; padding:3px 10px; font-size:13px; font-family:inherit; cursor:pointer;}
+  .evname.none{border-style:dashed; color:var(--sub); font-weight:600;}
+  .evname:active{background:var(--panel2);}
+  .eved{flex-basis:100%; width:100%; display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;
+    background:var(--bg); border:1px solid var(--blue); border-radius:10px; padding:8px;}
+  /* 16px はiOSの自動ズーム対策（設定タブの入力欄と揃える） */
+  .eved input{flex:1; min-width:140px; background:var(--panel); color:var(--txt);
+    border:1px solid var(--line); border-radius:8px; padding:8px 10px; font-size:16px; font-family:inherit;}
+  .eved .evedbtn{display:flex; gap:6px;}
+  .eved .evedbtn button{border:1px solid var(--line); background:var(--panel); color:var(--txt);
+    border-radius:8px; padding:0 14px; min-height:38px; font-size:14px; font-weight:700;
+    font-family:inherit; cursor:pointer;}
+  .eved .evedbtn .ok{background:var(--accent); border-color:var(--accent); color:#052e16;}
+  .evedc{flex-basis:100%; display:flex; flex-wrap:wrap; gap:6px; align-items:center;}
+  .evedc .lbl{font-size:11px; color:var(--sub);}
   .evchips{flex-basis:100%; display:flex; flex-wrap:wrap; gap:6px;}
   .evchip{border:1px solid var(--line); background:var(--bg); color:var(--txt); border-radius:999px;
     padding:8px 14px; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit;}
@@ -440,6 +466,8 @@
       <!-- 商品 -->
       <section class="slide">
         <div class="prodhead">
+          <!-- 営業日といまのイベント名。接客中に「どの名前で記録しているか」を見せる -->
+          <div class="evbar" id="evBar"></div>
           <div class="ttl"><span class="lbl">合計</span><span class="val totalVal">¥0</span></div>
           <span class="dscflag" id="dscFlag">値引き中</span>
           <button class="resetbtn" id="resetCart">リセット</button>
@@ -599,7 +627,7 @@
     {id:"p10",name:"サワー",         price:500, on:true},
     {id:"p9", name:"クラフトビール", price:600, on:true},
   ];
-  const APP_VERSION = "1.18";          // 画面下部に表示。仕様書の版数と揃える
+  const APP_VERSION = "1.19";          // 画面下部に表示。仕様書の版数と揃える
   const STORE  = "regmock_txns_v2";   // 会計履歴（形式は従来どおり）
   const DSTORE = "regmock_disc_v3";   // 値引き（商品IDキー）
   // v2：初期メニューを9品に入れ替えたため、キーを上げて新しい既定を配る。
@@ -760,6 +788,123 @@
   function currentEvent(){ return eventsFor(bd.value).cur; }
   function setEvents(date, list, cur){ evMap[date]={list, cur}; return saveEvents(); }
 
+  /* ===== イベント名の編集 =====
+     名前は「これから記録する会計に付く属性」なので、売上を見ていて気づいた場所で
+     そのまま直せるようにする。直したい日を営業日欄で選び直す必要はない。
+     付け替えの中身は renameEvent() に集約し、上の入力欄・売上一覧の双方から呼ぶ。 */
+
+  // 過去に使った名前を、最後に使った日の新しい順で返す（候補ボタン用）
+  function allEventNames(){
+    const last={};
+    txns.forEach(t=>{ const n=t.event||""; if(n && (!last[n] || t.date>last[n])) last[n]=t.date; });
+    Object.entries(evMap).forEach(([d,e])=>{
+      (Array.isArray(e&&e.list)?e.list:[]).filter(Boolean).forEach(n=>{ if(!last[n] || d>last[n]) last[n]=d; });
+    });
+    return Object.keys(last).sort((a,b)=> last[b]<last[a] ? -1 : last[b]>last[a] ? 1 : a.localeCompare(b,"ja"));
+  }
+
+  // date の from を to に付け替える。その日のその名前の会計記録も一緒に直す。
+  // from が "" なら「名前のないまま記録した会計」に名前を付けることになる。
+  function renameEvent(date, from, to){
+    to=String(to||"").trim();
+    if(!to){ showToast("イベント名は空にできません",1500,true); return false; }
+    if(to===from) return true;
+    const {list, cur}=eventsFor(date);
+    const hits=txns.filter(t=>t.date===date && (t.event||"")===from);
+    if(list.includes(to)){
+      // 同じ日にすでにある名前 → 2つを1つにまとめてよいか確認する
+      if(!confirm("「"+to+"」はこの日にすでにあります。\n「"+(from||"イベント名なし")+"」の会計 "+hits.length+"件 を「"+to+"」にまとめますか？")) return false;
+    }
+    hits.forEach(t=>t.event=to);
+    // 並び順を保つため、from があった位置に to を置く
+    const next=list.filter(x=>x!==from && x!==to);
+    const pos=list.indexOf(from);
+    next.splice(pos>=0 ? Math.min(pos,next.length) : next.length, 0, to);
+    const ok1 = hits.length ? saveTxns() : true;
+    const ok2 = setEvents(date, next, cur===from ? to : cur);
+    if(ok1 && ok2) showToast(hits.length
+      ? "この日の会計 "+hits.length+"件 を「"+to+"」にしました"
+      : "イベント名を「"+to+"」にしました", 1800);
+    return true;
+  }
+
+  /* 編集欄。売上一覧は作り直すので、開いている場所は外に持つ。
+     where:"day" … 売上一覧の日付見出しから／"add" … 「＋ 別のイベント」から */
+  let evEdit=null;
+  function evEditorHTML(){
+    const cands=allEventNames().filter(n=>n!==evEdit.from).slice(0,8);
+    return `<div class="eved">`
+      + `<input type="text" id="evedIn" value="${esc(evEdit.from)}" placeholder="例：夏祭り 屋台" enterkeyhint="done">`
+      + `<div class="evedbtn"><button type="button" class="ok" data-eved="ok">決定</button>`
+      + `<button type="button" data-eved="cancel">やめる</button></div>`
+      + (cands.length ? `<div class="evedc"><span class="lbl">前に使った名前：</span>`
+          + cands.map(n=>`<button type="button" class="evchip" data-evedpick="${esc(n)}">${esc(n)}</button>`).join("")
+          + `</div>` : "")
+      + `</div>`;
+  }
+  /* レジ画面のバー。営業日といまのイベント名を出し、名前はタップで直せる。
+     v1.19 で「後から直せる」ようにしたが、それは気づいた後の話。
+     接客中ずっと見えていれば、間違った名前のまま記録し続ける事故そのものが減る。 */
+  const evBar = document.getElementById("evBar");
+  function renderEvBar(){
+    const d=bd.value, cur=d?eventsFor(d).cur:"";
+    const md = d && /^\d{4}-\d{2}-\d{2}$/.test(d) ? (+d.slice(5,7))+"/"+(+d.slice(8,10)) : "日付未設定";
+    evBar.innerHTML = `<span class="bd">${esc(md)}</span>`
+      + `<button type="button" class="evname${cur?"":" none"}" data-evreg="1">`
+      + `${cur?esc(cur):"＋ イベント名を入れる"}</button>`
+      + (evEdit && evEdit.where==="reg" ? evEditorHTML() : "");
+  }
+  evBar.addEventListener("click", e=>{
+    if(evEditorHit(e)) return;
+    if(!e.target.closest("[data-evreg]")) return;
+    if(!bd.value){ showToast("先に売上タブで営業日を選んでください",2200,true); return; }
+    evEdit={where:"reg", date:bd.value, from:eventsFor(bd.value).cur};
+    renderEvBar(); evEditorFocus();
+  });
+  evBar.addEventListener("keydown", evEditorKey);
+
+  function evEditorFocus(){ const i=document.getElementById("evedIn"); if(i){ i.focus(); i.select(); } }
+  function evEditorClose(){ evEdit=null; loadEventUI(); renderEvBar(); renderSales(); }
+
+  // 「＋ 別のイベント」からの追加を確定する
+  function evAddCommit(v){
+    const date=evEdit.date, nm=String(v||"").trim();
+    if(!nm){ showToast("イベント名は空にできません",1500,true); return; }
+    const {list, cur}=eventsFor(date);
+    if(list.includes(nm)){ showToast("「"+nm+"」はこの日にすでにあります",1600,true); return; }
+    const next=list.slice(); if(cur && !next.includes(cur)) next.push(cur);
+    next.push(nm);
+    setEvents(date, next, nm);
+    evEdit=null; loadEventUI(); renderEvBar(); renderSales();
+    showToast("「"+nm+"」を追加しました。これからの会計はこの名前で記録します",2000);
+  }
+  // 売上一覧からの付け替えを確定する
+  function evDayCommit(v){
+    const {date, from}=evEdit;
+    if(!renameEvent(date, from, v)) return;   // 空・まとめ取消のときは開いたまま
+    evEdit=null;
+    if(date===bd.value) loadEventUI();
+    renderEvBar(); renderSales();
+  }
+  function evEditCommit(v){ if(evEdit.where==="add") evAddCommit(v); else evDayCommit(v); }
+
+  // 編集欄の中の操作。置き場所が2か所あるので、拾う処理は1つにまとめる
+  function evEditorHit(e){
+    if(!evEdit) return false;
+    const pick=e.target.closest("[data-evedpick]");
+    if(pick){ const i=document.getElementById("evedIn");
+      if(i){ i.value=pick.dataset.evedpick; i.focus(); } return true; }
+    const b=e.target.closest("[data-eved]");
+    if(!b) return false;
+    if(b.dataset.eved==="cancel"){ evEditorClose(); return true; }
+    evEditCommit((document.getElementById("evedIn")||{}).value||"");
+    return true;
+  }
+  function evEditorKey(e){
+    if(!evEdit || e.key!=="Enter" || e.target.id!=="evedIn") return;
+    e.preventDefault(); evEditCommit(e.target.value);
+  }
+
   const evChips = document.getElementById("evChips");
   function loadEventUI(){
     const {list, cur} = eventsFor(bd.value);
@@ -767,40 +912,23 @@
     evChips.innerHTML =
       (list.length>=2 ? list.map(nm=>
         `<button type="button" class="evchip ${nm===cur?"on":""}" data-ev="${esc(nm)}">${esc(nm)}</button>`).join("") : "")
-      + `<button type="button" class="evadd" id="evAdd">＋ 別のイベント</button>`;
+      + `<button type="button" class="evadd" id="evAdd">＋ 別のイベント</button>`
+      + (evEdit && evEdit.where==="add" ? evEditorHTML() : "");
+    renderEvBar();   // 営業日・イベントの切替をレジ側にも必ず反映する
   }
 
   // 名前の変更を確定（入力欄から離れたとき／Enter）
   evInput.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); evInput.blur(); } });
   evInput.addEventListener("change", ()=>{
     const date=bd.value; if(!date) return;
-    const {list, cur} = eventsFor(date);
-    const nm = evInput.value.trim();
+    const cur=eventsFor(date).cur, nm=evInput.value.trim();
     if(nm===cur){ evInput.value=cur; return; }
-    if(!nm){
-      evInput.value=cur;
-      showToast("イベント名は空にできません",1500,true); return;
-    }
-    const hits = txns.filter(t=>t.date===date && (t.event||"")===cur);
-    if(list.includes(nm)){
-      // 同じ日にすでにある名前 → 2つを1つにまとめるかを確認
-      if(!confirm("「"+nm+"」はこの日にすでにあります。\n「"+(cur||"イベント名なし")+"」の会計 "+hits.length+"件 を「"+nm+"」にまとめますか？")){
-        evInput.value=cur; return;
-      }
-    }
-    hits.forEach(t=>t.event=nm);
-    const next = list.filter(x=>x!==cur && x!==nm);
-    const pos = Math.max(0, list.indexOf(cur));
-    next.splice(Math.min(pos, next.length), 0, nm);
-    const ok1 = hits.length ? saveTxns() : true;
-    const ok2 = setEvents(date, next, nm);
+    if(!renameEvent(date, cur, nm)){ evInput.value=cur; return; }
     loadEventUI(); renderSales();
-    if(ok1 && ok2) showToast(hits.length
-      ? "この日の会計 "+hits.length+"件 も「"+nm+"」に変更しました"
-      : "イベント名を「"+nm+"」にしました", 1800);
   });
 
   evChips.addEventListener("click", e=>{
+    if(evEditorHit(e)) return;
     const date=bd.value; if(!date) return;
     const chip=e.target.closest("button[data-ev]");
     if(chip){
@@ -811,22 +939,19 @@
       return;
     }
     if(e.target.closest("#evAdd")){
-      const {list, cur} = eventsFor(date);
-      const nm = (prompt("この日に追加するイベント名") || "").trim();
-      if(!nm) return;
-      if(list.includes(nm)){ showToast("「"+nm+"」はこの日にすでにあります",1600,true); return; }
+      const cur=eventsFor(date).cur;
       // 名前のないまま会計していた場合は、先にその分へ名前を付けてもらう
       if(!cur && txns.some(t=>t.date===date && !t.event)){
         showToast("先に、いまのイベント名を入力してください（名前なしの会計があります）",2600,true);
         evInput.focus(); return;
       }
-      const next = list.slice(); if(cur && !next.includes(cur)) next.push(cur);
-      next.push(nm);
-      setEvents(date, next, nm);
-      loadEventUI();
-      showToast("「"+nm+"」を追加しました。これからの会計はこの名前で記録します",2000);
+      // 以前は prompt() を使っていたが、見た目がアプリと合わず候補も出せないため
+      // 値引き（v1.11）と同じく、その場に出す編集欄へ置き換えた
+      evEdit={where:"add", date, from:""};
+      loadEventUI(); evEditorFocus();
     }
   });
+  evChips.addEventListener("keydown", evEditorKey);
 
   /* ===== 金額計算 ===== */
   function eff(p){
@@ -1731,11 +1856,16 @@
       const dayQty=dt.reduce((s,t)=>s+t.items.reduce((a,it)=>a+it.count,0),0);
       const evKeys=[...new Set(dt.map(t=>t.event||""))];
       const events=evKeys.filter(Boolean);
-      const evLabel = evKeys.length>=2 ? "" : (events.length?esc(events[0]):"（イベント名なし）");
+      // 名前をボタンにする。名前がない日は破線にして「押せる」ことを見せる
+      const evBtn = (from, text) =>
+        `<button type="button" class="evname${from?"":" none"}" data-evdate="${esc(date)}" `
+        + `data-evfrom="${esc(from)}">${esc(text)}</button>`;
+      const evLabel = evKeys.length>=2 ? "" : evBtn(events[0]||"", events.length?events[0]:"（イベント名なし）");
       // 同じ日に複数イベント（または名前なしと混在）なら、イベントごとの小計を出す
       const evSum = evKeys.length>=2 ? `<div class="evsum">${evKeys.map(k=>{
         const et=dt.filter(t=>(t.event||"")===k);
-        return `<div class="er"><span class="en">${k?esc(k):"（イベント名なし）"}</span>`
+        return `<div class="er"><button type="button" class="en${k?"":" none"}" `
+          + `data-evdate="${esc(date)}" data-evfrom="${esc(k)}">${k?esc(k):"（イベント名なし）"}</button>`
           + `<span class="ec">会計${et.length}件</span><span class="ea">${yen(et.reduce((a,t)=>a+t.total,0))}</span></div>`;
       }).join("")}</div>` : "";
       const agg={};
@@ -1760,7 +1890,8 @@
       return `<div class="daygroup">
         <div class="dayhead"><span class="date">${fmtDate(date)}</span><span class="ev">${evLabel}</span>
           <span class="sum">${yen(dayTotal)}</span>
-          <span class="meta">会計 ${dt.length}件 ／ 販売 ${dayQty}点${discMeta}</span>${evSum}</div>
+          <span class="meta">会計 ${dt.length}件 ／ 販売 ${dayQty}点${discMeta}</span>${evSum}
+          ${evEdit && evEdit.where==="day" && evEdit.date===date ? evEditorHTML() : ""}</div>
         <div class="daybody">
           <details class="fold byitem" data-fold="item:${date}"${foldOpen("item:"+date)?" open":""}>
             <summary><h4>品目別（実売）</h4><span class="fc">${Object.keys(agg).length}品目</span></summary>
@@ -1779,8 +1910,18 @@
     return `${y}年${m}月${day}日(${w})`;
   }
 
+  /* 売上一覧のイベント名をタップ → その場で編集 */
+  document.getElementById("dayList").addEventListener("click", e=>{
+    if(evEditorHit(e)) return;
+    const nb=e.target.closest("button[data-evdate]"); if(!nb) return;
+    evEdit={where:"day", date:nb.dataset.evdate, from:nb.dataset.evfrom||""};
+    renderSales(); evEditorFocus();
+  });
+  document.getElementById("dayList").addEventListener("keydown", evEditorKey);
+
   /* 会計履歴からの削除 */
   document.getElementById("dayList").addEventListener("click", e=>{
+    if(evEdit) return;           // 編集中は削除の誤爆を防ぐ
     const b=e.target.closest("button[data-del]"); if(!b) return;
     const id=+b.dataset.del, t=txns.find(x=>x.id===id);
     if(!t) return;
