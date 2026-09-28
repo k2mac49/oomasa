@@ -56,6 +56,8 @@
   .evbar{flex-basis:100%; display:flex; align-items:center; flex-wrap:wrap; gap:6px; line-height:1;}
   .evbar .bd{font-size:11px; color:var(--sub); font-weight:700;}
   .evbar .evname{padding:2px 8px; font-size:12px;}
+  /* 当日（選択中の営業日）の客数＝会計件数。1会計＝1組として数える */
+  .custs{font-size:14px; font-weight:800; color:var(--blue); white-space:nowrap;}
   .prodhead .ttl{flex:1; display:flex; align-items:baseline; gap:8px;}
   .prodhead .ttl .lbl{font-size:13px; color:var(--sub);}
   .prodhead .ttl .val{font-size:30px; font-weight:900; line-height:1;}
@@ -469,6 +471,7 @@
           <!-- 営業日といまのイベント名。接客中に「どの名前で記録しているか」を見せる -->
           <div class="evbar" id="evBar"></div>
           <div class="ttl"><span class="lbl">合計</span><span class="val totalVal">¥0</span></div>
+          <span class="custs" id="custs">👤 0人</span>
           <span class="dscflag" id="dscFlag">値引き中</span>
           <button class="resetbtn" id="resetCart">リセット</button>
         </div>
@@ -627,7 +630,7 @@
     {id:"p10",name:"サワー",         price:500, on:true},
     {id:"p9", name:"クラフトビール", price:600, on:true},
   ];
-  const APP_VERSION = "1.19";          // 画面下部に表示。仕様書の版数と揃える
+  const APP_VERSION = "1.20";          // 画面下部に表示。仕様書の版数と揃える
   const STORE  = "regmock_txns_v2";   // 会計履歴（形式は従来どおり）
   const DSTORE = "regmock_disc_v3";   // 値引き（商品IDキー）
   // v2：初期メニューを9品に入れ替えたため、キーを上げて新しい既定を配る。
@@ -996,17 +999,28 @@
   });
 
   /* ===== 電卓 ===== */
+  /* 預り金は「確定分（クイック入金で入れた額）＋ 打ちかけの数字」で持つ。
+     こうすると +1000 のあとに 100 と打てば 1100 になる（文字列の連結にならない）。 */
+  let recvFixed=0, recvTyped="";
+  function syncRecv(){ received=Math.min(99999999, recvFixed + (parseInt(recvTyped,10)||0)); }
+  function clearRecv(){ recvFixed=0; recvTyped=""; received=0; }
+
   document.getElementById("keypad").addEventListener("click", e=>{
     const k=e.target.dataset.k; if(k===undefined) return;
-    let s=String(received);
-    if(k==="del") s=s.length<=1?"0":s.slice(0,-1);
-    else if(k==="00") s=s==="0"?"0":s+"00";
-    else s=s==="0"?k:s+k;
-    received=Math.min(99999999, parseInt(s,10)||0); render();
+    if(k==="del"){
+      if(recvTyped) recvTyped=recvTyped.slice(0,-1);   // 打ちかけを1桁ずつ消す
+      else recvFixed=0;                                 // 無くなったら確定分を消す
+    }
+    else if(k==="00") recvTyped = recvTyped ? recvTyped+"00" : "";
+    else recvTyped = (recvTyped==="" && k==="0") ? "" : recvTyped+k;
+    if(recvTyped.length>8) recvTyped=recvTyped.slice(0,8);
+    syncRecv(); render();
   });
   document.getElementById("quick").addEventListener("click", e=>{
     const q=e.target.dataset.q; if(!q) return;
-    received=Math.min(99999999, received+(+q)); render();
+    recvFixed = Math.min(99999999, recvFixed + (parseInt(recvTyped,10)||0) + (+q));  // 打ちかけも確定させる
+    recvTyped = "";
+    syncRecv(); render();
   });
 
   function render(){
@@ -1033,6 +1047,9 @@
     document.getElementById("dscFlag").textContent = "値引き中 "+discCount()+"品";
     document.getElementById("discSum").textContent = anyDisc() ? ("値引き中 "+discCount()+"品") : "";
     document.getElementById("resetCart").disabled = !any && received===0;
+    // 当日の客数。テストデータは実績ではないので数えない
+    const todays = txns.filter(t=>!t.test && t.date===bd.value).length;
+    document.getElementById("custs").textContent = "👤 "+todays+"人";
 
     const change=received-net;
     const cb=document.getElementById("changebox"), ch=document.getElementById("change");
@@ -1058,7 +1075,7 @@
     // 会計ごとのバルーンは接客の邪魔になるため出さない。
     // 保存に失敗したときだけ saveTxns() が赤いトーストで知らせる。
     saveTxns();
-    counts={}; received=0; render(); renderSales();
+    counts={}; clearRecv(); render(); renderSales();
     goPage(0);   // 次のお客さん用に商品へ戻る
   });
   /* 取消：電卓の C / AC と同じ挙動。
@@ -1069,11 +1086,11 @@
     const qty=visible().reduce((sum,p)=>sum+cnt(p),0);
     if(qty===0 && received===0) return;
     if(!confirm("打ち込んだ内容をすべて白紙に戻します。\n（現在 "+qty+"点 ／ "+yen(getNet())+"）\nよろしいですか？")) return;
-    counts={}; received=0; render();
+    counts={}; clearRecv(); render();
   });
 
   document.getElementById("clearAll").addEventListener("click", ()=>{
-    if(received>0){ received=0; render(); return; }        // C：預り金だけ。確認なし
+    if(received>0){ clearRecv(); render(); return; }        // C：預り金だけ。確認なし
     const qty=visible().reduce((sum,p)=>sum+cnt(p),0);
     if(qty===0) return;                                    // 消すものがない
     if(!confirm("商品の個数もすべてリセットされます。\n（現在 "+qty+"点 ／ "+yen(getNet())+"）\nよろしいですか？")) return;
@@ -1085,7 +1102,7 @@
     const msg = "すべての売上データを消去します。\n"
       + (un>0 ? "★ まだCSVに書き出していない会計が "+un+"件 あります。\n" : "")
       + "元に戻せません。よろしいですか？";
-    if(confirm(msg)){ txns=[]; saveTxns(); renderSales(); }
+    if(confirm(msg)){ txns=[]; saveTxns(); renderSales(); render(); }   // レジ画面の客数も0に
   });
 
   /* ===== 値引き（設定タブのアコーディオン内で編集） ===== */
@@ -1815,7 +1832,7 @@
     const n=txns.filter(t=>t.test).length; if(!n) return;
     if(!confirm(`テストデータ ${n}件 を削除します。本物の会計はそのまま残ります。`)) return;
     txns=txns.filter(t=>!t.test);
-    const ok=saveTxns(); renderSales(); drawTestInfo();
+    const ok=saveTxns(); renderSales(); drawTestInfo(); render();
     if(ok) showToast("テストデータを削除しました",1500);
   });
 
@@ -1927,7 +1944,7 @@
     if(!t) return;
     if(!confirm(`No.${id}（${t.time}／${yen(t.total)}）を削除します。\n元に戻せません。よろしいですか？`)) return;
     txns=txns.filter(x=>x.id!==id);
-    const ok=saveTxns(); renderSales();
+    const ok=saveTxns(); renderSales(); render();   // レジ画面の客数も減らす
     if(ok) showToast(`No.${id} を削除しました`,1600);
   });
 
