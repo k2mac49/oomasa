@@ -300,8 +300,12 @@
   .act{display:flex; gap:8px; flex-wrap:wrap;}
   .btn-export{flex:1; background:var(--blue); color:#052e16; border:0; border-radius:10px;
     padding:12px; font-size:15px; font-weight:800; cursor:pointer;}
+  /* 全消去を止めたときに、書き出しボタンを一瞬光らせて誘導する */
+  .btn-export.urge{animation:urge .5s ease-in-out 4;}
+  @keyframes urge{50%{transform:scale(1.04); box-shadow:0 0 0 4px rgba(56,189,248,.45);}}
   .danger{background:transparent; border:1px solid var(--warn); color:var(--warn);
     border-radius:10px; padding:11px 14px; font-size:13px; font-weight:700; cursor:pointer;}
+  .danger.locked{opacity:.45; border-color:var(--line); color:var(--sub);}
   .daygroup{background:var(--panel); border:1px solid var(--line); border-radius:12px; overflow:hidden;}
   .dayhead{display:flex; align-items:baseline; gap:10px; padding:11px 12px; background:var(--panel2); flex-wrap:wrap;}
   .dayhead .date{font-size:15px; font-weight:800;}
@@ -630,7 +634,7 @@
     {id:"p10",name:"サワー",         price:500, on:true},
     {id:"p9", name:"クラフトビール", price:600, on:true},
   ];
-  const APP_VERSION = "1.20";          // 画面下部に表示。仕様書の版数と揃える
+  const APP_VERSION = "1.21";          // 画面下部に表示。仕様書の版数と揃える
   const STORE  = "regmock_txns_v2";   // 会計履歴（形式は従来どおり）
   const DSTORE = "regmock_disc_v3";   // 値引き（商品IDキー）
   // v2：初期メニューを9品に入れ替えたため、キーを上げて新しい既定を配る。
@@ -735,6 +739,10 @@
     const lastTxt = d ? `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`
                       : "まだ一度もありません";
     el.classList.toggle("warn", un>0);
+    // 未書き出しがあるうちは全消去を淡色にして「いまは消せない」と分かるようにする
+    const cd=document.getElementById("clearData");
+    if(cd){ cd.classList.toggle("locked", un>0);
+      cd.textContent = un>0 ? "全消去（要書き出し）" : "全消去"; }
     el.innerHTML =
       `<span class="st">${un>0 ? "⚠ 未書き出し "+un+"件" : "✓ すべて書き出し済み"}</span>`
       + `<span class="sub2">最後の書き出し：${esc(lastTxt)}</span>`
@@ -1099,10 +1107,20 @@
   });
   document.getElementById("clearData").addEventListener("click", ()=>{
     const un=unexported().length;
-    const msg = "すべての売上データを消去します。\n"
-      + (un>0 ? "★ まだCSVに書き出していない会計が "+un+"件 あります。\n" : "")
-      + "元に戻せません。よろしいですか？";
-    if(confirm(msg)){ txns=[]; saveTxns(); renderSales(); render(); }   // レジ画面の客数も0に
+    if(un>0){
+      // 消させない。ここを confirm で通していたために、書き出さないまま消える事故が起きた
+      alert("まだCSVに書き出していない会計が "+un+"件 あります。\n\n"
+        + "先に「⬆ CSVで書き出す／共有」を押して保存してください。\n"
+        + "書き出すまで全消去はできません。");
+      const btn=document.getElementById("exportBtn");
+      btn.scrollIntoView({block:"nearest"});
+      btn.classList.add("urge");                       // どこを押せばいいか光らせる
+      setTimeout(()=>btn.classList.remove("urge"),2600);
+      return;
+    }
+    if(confirm("すべての売上データを消去します。\n書き出し済みですが、この端末からは消えます。\n元に戻せません。よろしいですか？")){
+      txns=[]; saveTxns(); renderSales(); render();   // レジ画面の客数も0に
+    }
   });
 
   /* ===== 値引き（設定タブのアコーディオン内で編集） ===== */
