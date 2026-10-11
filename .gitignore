@@ -1,0 +1,6 @@
+# 売上の実データを公開リポジトリに入れないための除け。
+# gen-past.js が作るローカル専用ビルドはここで止める。
+index-local.html
+regi-offline-local.html
+past-data.js
+*.csv

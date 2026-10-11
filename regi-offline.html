@@ -1,6 +1,6 @@
 <!-- このファイルは build-offline.js が index.html から自動生成したものです。
      直接編集しないでください。直すときは index.html を直して node build-offline.js を実行。
-     生成元: v1.23 -->
+     生成元: v1.25 -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -493,6 +493,20 @@
   .prow .pv.zero{color:var(--sub);}
   .prow .pv .arw{color:var(--warn); font-weight:800; margin:0 6px; font-size:12px;}
   .prow .pv .res{color:var(--warn);}
+  /* 一括設定。全品に同じ値引きを入れてから、要らない商品だけ戻す使い方を想定 */
+  .bulk{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;}
+  .bulk button{height:46px; border:1px solid var(--line); background:var(--bg); color:var(--txt);
+    border-radius:10px; font-size:14px; font-weight:800; cursor:pointer; font-family:inherit;}
+  .bulk .bhalf{border-color:var(--hz1); color:var(--hz1);}
+  .bulk .bapply{background:var(--hz1); border-color:var(--hz1); color:var(--hz2);}
+  .bulk .bamt{display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:4px;
+    border:1px solid var(--line); border-radius:10px; padding:0 4px;}
+  .bulk .bamt button{height:38px; min-width:46px; border:0; background:transparent; font-size:13px;}
+  .bulk .bamt .v{text-align:center; font-size:16px; font-weight:900;
+    font-variant-numeric:tabular-nums; color:var(--hz1);}
+  @media (max-width:420px){ .bulk{grid-template-columns:1fr;} }
+  .prow .pc .non{min-width:44px; padding:0 6px; font-size:13px; color:var(--sub);}
+
   /* 適用・解除はいちばん上。商品を下へスクロールしても上に貼り付いて付いてくる */
   .discact{position:sticky; top:-10px; z-index:2; display:grid; grid-template-columns:1.5fr 1fr; gap:8px;
     background:var(--panel); padding:10px 0; margin-bottom:4px;}
@@ -614,8 +628,18 @@
           <button class="apply" id="discApply">この内容で適用</button>
           <button class="clear" id="discClear">すべて解除</button>
         </div>
+        <div class="bulk">
+          <button type="button" class="bhalf" id="bulkHalf">全品 半額</button>
+          <div class="bamt" id="bulkAmt">
+            <button type="button" data-b="-">−100</button>
+            <span class="v" id="bulkVal">¥200</span>
+            <button type="button" data-b="+">＋100</button>
+          </div>
+          <button type="button" class="bapply" id="bulkApply">全品に引く</button>
+        </div>
         <div id="discRows"></div>
-        <p class="note">−100で値下げ／＋100で戻す（定価超え・100円未満は不可）。
+        <p class="note">一括で入れてから、値引きしない商品だけ「なし」で戻すのが早いです。
+          −100で値下げ／＋100で戻す（定価超え・100円未満は不可）。
           「この内容で適用」を押すまでレジには反映されません。
           適用すると<b>解除するまで続きます</b>（営業日を変えると自動で解除）。
           適用中はレジ画面の合計が赤くなり、「値引き中」の印が出ます。</p>
@@ -656,6 +680,19 @@
           <button type="button" data-t="light">☀️ 明るい背景</button>
         </div>
         <p class="note">屋外の明るいところでは、白文字より<b>黒文字のほう</b>が読めます。日向に出る日は明るい背景にしてください。</p>
+      </div>
+    </details>
+
+    <details class="sect" id="sectPast">
+      <summary>📚 過去の実績</summary>
+      <div class="sectbody">
+        <div id="pastInfo" class="note"></div>
+        <div class="testact">
+          <button type="button" class="add" id="pastAdd">読み込む</button>
+          <button type="button" id="pastDel">削除</button>
+        </div>
+        <p class="note">このアプリに入っている過去の売上です。読み込むと<b>売上タブと分析</b>で見られます。
+          当日の客数や「未書き出し」の件数には入りません。いつでも削除できます。</p>
       </div>
     </details>
 
@@ -714,7 +751,7 @@
     {id:"p10",name:"サワー",         price:500, on:true},
     {id:"p9", name:"クラフトビール", price:600, on:true},
   ];
-  const APP_VERSION = "1.23 オフライン版";          // 画面下部に表示。仕様書の版数と揃える
+  const APP_VERSION = "1.25 オフライン版";          // 画面下部に表示。仕様書の版数と揃える
   const STORE  = "regmock_txns_v2";   // 会計履歴（形式は従来どおり）
   const DSTORE = "regmock_disc_v3";   // 値引き（商品IDキー）
   // v2：初期メニューを9品に入れ替えたため、キーを上げて新しい既定を配る。
@@ -787,7 +824,7 @@
   /* ===== 消えたとき取り返しがつかないので、書き出し状況を必ず見せる ===== */
   let backup = (function(){ try{ return JSON.parse(localStorage.getItem(BSTORE))||{}; }catch(e){ return {}; } })();
   function saveBackup(){ try{ localStorage.setItem(BSTORE, JSON.stringify(backup)); return true; }catch(e){ return false; } }
-  function unexported(){ const m=backup.lastExportMaxId||0; return txns.filter(t=>!t.test && (t.id||0)>m); }
+  function unexported(){ const m=backup.lastExportMaxId||0; return txns.filter(t=>!t.test && !t.pre && (t.id||0)>m); }
   /* 次の会計No。書き出し済みの最大Noより必ず大きくする。
      （最後の会計を消したあとに同じNoが再利用され、「書き出し済み」と誤判定されるのを防ぐ） */
   function nextId(){ return Math.max(txns.reduce((m,t)=>Math.max(m,t.id||0),0), backup.lastExportMaxId||0) + 1; }
@@ -1140,7 +1177,7 @@
     document.getElementById("discSum").textContent = anyDisc() ? ("値引き中 "+discCount()+"品") : "";
     document.getElementById("resetCart").disabled = !any && received===0;
     // 当日の客数。テストデータは実績ではないので数えない
-    const todays = txns.filter(t=>!t.test && t.date===bd.value).length;
+    const todays = txns.filter(t=>!t.test && !t.pre && t.date===bd.value).length;
     document.getElementById("custs").innerHTML =
       '<span class="i">👤</span>'+todays+'<span class="u">人</span>';
 
@@ -1220,6 +1257,7 @@
           <span class="pv"></span>
           <button data-a="up">＋100</button>
           <button class="hf" data-a="half">半額</button>
+          <button class="non" data-a="none">なし</button>
         </div>
       </div>`).join("") : `<p>レジに出す商品がありません。</p>`;
   }
@@ -1250,7 +1288,8 @@
     const id=b.closest(".prow").dataset.id;
     const p=PRODUCTS.find(x=>x.id===id); if(!p) return;
     const a=b.dataset.a, cur=(draft[id]&&draft[id].type==="amount")?draft[id].value:0;
-    if(a==="half") draft[id] = (draft[id]&&draft[id].type==="half") ? {type:"amount",value:0} : {type:"half"};
+    if(a==="none") draft[id] = {type:"amount", value:0};        // この商品だけ値引きなしに戻す
+    else if(a==="half") draft[id] = (draft[id]&&draft[id].type==="half") ? {type:"amount",value:0} : {type:"half"};
     else if(a==="down") draft[id] = {type:"amount", value:Math.min(p.price-100, cur+100)};
     else draft[id] = {type:"amount", value:Math.max(0, cur-100)};
     drawDraft();
@@ -1281,6 +1320,38 @@
     if(ok) showToast("すべての値引きを解除しました",1400);
   });
 
+  /* ===== 値引きの一括設定 =====
+     「全品やる」ことがほとんどで、ビールなど一部だけ外す使い方になる。
+     下書きに入れるだけなので、外してから「この内容で適用」を押せばよい。 */
+  let bulkAmt=200;
+  function drawBulk(){ const el=document.getElementById("bulkVal"); if(el) el.textContent=yen(bulkAmt); }
+  document.getElementById("bulkAmt").addEventListener("click", e=>{
+    const b=e.target.closest("button[data-b]"); if(!b) return;
+    bulkAmt = Math.min(2000, Math.max(100, bulkAmt + (b.dataset.b==="+" ? 100 : -100)));
+    drawBulk();
+  });
+  document.getElementById("bulkHalf").addEventListener("click", ()=>{
+    const list=visible(); if(!list.length) return;
+    list.forEach(p=>draft[p.id]={type:"half"});
+    drawDraft();
+    showToast("全"+list.length+"品を半額にしました。外す商品は「なし」を押してください",2600);
+  });
+  document.getElementById("bulkApply").addEventListener("click", ()=>{
+    const list=visible(); if(!list.length) return;
+    let capped=0;
+    list.forEach(p=>{
+      const max=Math.max(0, p.price-100);          // 実売100円は下回らせない
+      const v=Math.min(bulkAmt, max);
+      if(v<bulkAmt) capped++;
+      draft[p.id]={type:"amount", value:v};
+    });
+    drawDraft();
+    showToast("全"+list.length+"品を "+yen(bulkAmt)+" 引きにしました"
+      + (capped ? "（"+capped+"品は100円までで止めています）" : "")
+      + "。外す商品は「なし」を押してください", 2800);
+  });
+  drawBulk();
+
   /* 設定のアコーディオン：開いたらすぐ編集できる状態にし、1つ開いたら他は閉じる */
   const sectDisc=document.getElementById("sectDisc"), sectProd=document.getElementById("sectProd");
   function scrollSectTop(sect){
@@ -1290,7 +1361,8 @@
   const SECT_OPEN = {
     sectDisc: ()=>resetDraft(),     // 開いた瞬間に、いまの値引き状態で編集画面を出す
     sectProd: ()=>renderEdit(),
-    sectView: ()=>drawViewPick(),
+    sectView: ()=>{ drawViewPick(); drawSubPick(); drawThemePick(); },
+    sectPast: ()=>drawPastInfo(),
     sectTest: ()=>drawTestInfo(),
   };
   document.querySelectorAll("#pageSettings details.sect").forEach(sect=>{
@@ -1301,6 +1373,64 @@
       scrollSectTop(sect);
     });
   });
+
+  /* ===== 過去の実績の読み込み =====
+     実際に売った記録なので test とは別扱いにする（pre フラグ）。
+     ただし「当日の客数」「未書き出し」には混ぜない。過去の日付のものだから。 */
+  function pastDays(){
+    return PAST_DATA.d.map(d=>{
+      let q=0,a=0;
+      d.t.forEach(t=>t[2].forEach(([i,qt,u])=>{ q+=qt; a+=(u!==undefined?u:PAST_DATA.p[i])*qt; }));
+      return {date:d.d, ev:d.e, n:d.t.length, qty:q, amt:a};
+    });
+  }
+  function drawPastInfo(){
+    const el=document.getElementById("pastInfo"); if(!el) return;
+    const inApp=txns.some(t=>t.pre);
+    el.innerHTML = pastDays().map(d=>
+      "<div>"+esc(d.date)+"　<b>"+esc(d.ev)+"</b>　"+d.n+"件 "+d.qty+"点 "+yen(d.amt)+"</div>").join("")
+      + '<div style="margin-top:6px">いまの状態：<b>'+(inApp?"読み込み済み":"未読み込み")+"</b></div>";
+  }
+  function loadPast(){
+    if(txns.some(t=>t.pre) && !confirm("過去の実績はすでに読み込まれています。入れ直しますか？")) return;
+    txns=txns.filter(t=>!t.pre);
+    let id=txns.reduce((m,t)=>Math.max(m,t.id||0),0);
+    const p2=n=>String(n).padStart(2,"0");
+    PAST_DATA.d.forEach(d=>{
+      d.t.forEach(rec=>{
+        const [mm,recv,items]=rec;
+        const its=items.map(([i,q,u])=>({
+          name:PAST_DATA.n[i], price:PAST_DATA.p[i], count:q,
+          unit:(u!==undefined?u:PAST_DATA.p[i])
+        }));
+        const gross=its.reduce((a,i)=>a+i.price*i.count,0);
+        const net=its.reduce((a,i)=>a+i.unit*i.count,0);
+        txns.push({
+          id:++id, date:d.d, event:d.e, pre:true,
+          time:p2(Math.floor(mm/60))+":"+p2(mm%60),
+          items:its, subtotal:gross, discount:gross-net, total:net,
+          received:recv, change:recv-net
+        });
+      });
+    });
+    if(saveTxns()){
+      renderSales(); render(); drawPastInfo();
+      const s=pastDays().reduce((a,d)=>a+d.n,0);
+      showToast("過去の実績 "+s+"件 を読み込みました",2000);
+    }
+  }
+  function delPast(){
+    const n=txns.filter(t=>t.pre).length; if(!n) return;
+    if(!confirm("読み込んだ過去の実績 "+n+"件 を削除します。\nアプリに入っているデータなので、あとで読み込み直せます。")) return;
+    txns=txns.filter(t=>!t.pre);
+    if(saveTxns()){ renderSales(); render(); drawPastInfo(); showToast("過去の実績を削除しました",1600); }
+  }
+  // 同梱データが無いビルド（公開用）では、この項目ごと隠す
+  if(!PAST_DATA.d.length){
+    const sp=document.getElementById("sectPast"); if(sp) sp.hidden=true;
+  }
+  document.getElementById("pastAdd").addEventListener("click", loadPast);
+  document.getElementById("pastDel").addEventListener("click", delPast);
 
   /* ===== 設定：レジの表示（表形式／カード式） ===== */
   let viewMode = (function(){ try{ return localStorage.getItem(VSTORE)==="card" ? "card" : "list"; }catch(e){ return "list"; } })();
@@ -2171,6 +2301,7 @@
       if(document.getElementById("sectDisc").open) resetDraft();
       if(document.getElementById("sectView").open){ drawViewPick(); drawSubPick(); drawThemePick(); }
       if(document.getElementById("sectTest").open) drawTestInfo();
+      if(document.getElementById("sectPast").open) drawPastInfo();
     }
     // レジに戻ったときは必ず商品ページから始める（電卓のまま戻らない）
     // レジに戻ったときは必ず商品ページから。表示直後はレイアウトが未確定なので、
@@ -2236,6 +2367,11 @@
       showToast("未書き出しの会計が "+un+"件 あります。CSVで書き出してください",5000,true);
     }
   },1500);
+
+  /* ===== 同梱している過去の実績 =====
+     scratchpad の gen-past.js が CSV から生成したもの。手で編集しない。
+     n:商品名 / p:定価 / d:[{d:日付, e:イベント名, t:[[開始からの分, 預り金, [[商品番号,個数,(実売単価)]…]]…]}] */
+  const PAST_DATA = {n:[],p:[],d:[]};   // 実データは公開しない。gen-past.js でローカルにだけ入れる
 
   /* オフライン版なので Service Worker は使わない（file:// では登録できない） */
 </script>

@@ -83,6 +83,14 @@ s = fx(`<!-- このファイルは build-offline.js が index.html から自動�
 `) + s;
 
 fs.writeFileSync(OUT, s, "utf8");
+
+/* ダウンロード案内ページの版数も合わせる（書き忘れて古い版数が残るのを防ぐ） */
+const DLP = path.join(DIR, "dl.html");
+if(fs.existsSync(DLP)){
+  let dl = fs.readFileSync(DLP, "utf8");
+  const next = dl.replace(/v[0-9.]+ オフライン版/, "v" + ver + " オフライン版");
+  if(next !== dl){ fs.writeFileSync(DLP, next, "utf8"); console.log("  ok  dl.html の版数を更新"); }
+}
 console.log(`\n${n}件適用`);
 console.log(`生成: ${OUT}`);
 console.log(`サイズ: ${(fs.statSync(OUT).size/1024).toFixed(1)} KB（元 ${(fs.statSync(SRC).size/1024).toFixed(1)} KB）`);

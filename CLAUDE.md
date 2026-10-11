@@ -40,7 +40,13 @@ grep -o 'APP_VERSION = "[0-9.]*"' index.html
   manifest と Service Worker を外し、アイコンを data URI で埋め込んでファイル1つに。
   localStorage が使えない環境では起動時に止める（file:// は端末により保存不可のため）。
 - `dl.html` … そのダウンロード案内ページ
-- `build-offline.js` … 上記の生成スクリプト
+- `build-offline.js` … 上記の生成スクリプト（dl.html の版数表示も合わせる）
+- `gen-past.js` … 過去の実績を同梱した**ローカル専用ビルド**を作るスクリプト
+  **売上の実データは公開リポジトリに入れない。** 公開用の index.html の `PAST_DATA` は空で、
+  空のときは設定の「📚 過去の実績」ごと隠れる。
+  `node gen-past.js` で `index-local.html` と `regi-offline-local.html` を生成する
+  （どちらも .gitignore 済み）。タブレットにはこのローカル版を渡す。
+  入力CSVは手元にしか無いので、作り直すときは当時のCSVを用意すること
 - `index.html` … UI・ロジック・CSS をすべて内包した単一ファイル
 - `sw.js` … Service Worker（HTMLはネット優先、2.5秒でキャッシュに切替）
 - `manifest.json` / アイコン類
@@ -60,7 +66,7 @@ grep -o 'APP_VERSION = "[0-9.]*"' index.html
   3. `仕様書.md` の版数行と「10. 変更履歴」
   4. `README.md`（機能一覧・現行キャッシュ名）
 
-## 現在の状態（v1.23 / regi-cache-v33）
+## 現在の状態（v1.25 / regi-cache-v35）
 
 ### 売上画面
 - **未書き出しがあるうちは全消去できない**（v1.21）。確認ダイアログではなく拒否。
