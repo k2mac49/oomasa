@@ -57,7 +57,10 @@
   .evbar .bd{font-size:11px; color:var(--sub); font-weight:700;}
   .evbar .evname{padding:2px 8px; font-size:12px;}
   /* 当日（選択中の営業日）の客数＝会計件数。1会計＝1組として数える */
-  .custs{font-size:14px; font-weight:800; color:var(--blue); white-space:nowrap;}
+  /* 入場者数は合計金額と同じ大きさ。接客しながら横目で読める必要がある */
+  .custs{font-size:30px; font-weight:900; line-height:1; color:var(--blue); white-space:nowrap;}
+  .custs .u{font-size:15px; font-weight:800; margin-left:1px;}
+  .custs .i{font-size:17px; margin-right:2px; vertical-align:2px;}
   .prodhead .ttl{flex:1; display:flex; align-items:baseline; gap:8px;}
   .prodhead .ttl .lbl{font-size:13px; color:var(--sub);}
   .prodhead .ttl .val{font-size:30px; font-weight:900; line-height:1;}
@@ -183,6 +186,7 @@
     .product .name{font-size:18px;}
     .product .price{font-size:14px;}
     .prodhead .ttl .val{font-size:34px;}
+    .custs{font-size:34px;}
     .ctrl button{width:64px; height:58px; font-size:32px;}
     .ctrl .count{min-width:36px; font-size:24px;}
     .ctrl .sub{font-size:13px; min-width:50px;}
@@ -199,8 +203,11 @@
   @media (orientation:landscape) and (min-width:900px) and (min-height:601px){
     body[data-view="card"] .products{display:grid; grid-template-columns:repeat(auto-fill,minmax(172px,1fr));
       align-content:start; gap:8px;}
+    /* min-height:0 を付けると、グリッドの行が中身より小さく計算され、
+       ±ボタンがカードの下にはみ出す（カード83px・中身134px になっていた）。
+       グリッド項目では外すこと。 */
     body[data-view="card"] .product{flex-direction:column; align-items:stretch; justify-content:space-between;
-      gap:8px; padding:10px 10px 10px; min-height:0;}
+      gap:8px; padding:10px;}
     body[data-view="card"] .product.has{border-color:var(--accent); background:rgba(34,197,94,.08);}
     body[data-view="card"] #pageRegister.disc .product.on{border-color:var(--warn);}
     body[data-view="card"] .product .info{flex:1; display:flex; flex-direction:column; justify-content:center;
@@ -401,10 +408,18 @@
   .erow{display:flex; gap:8px; background:var(--panel); border:1px solid var(--line);
     border-radius:12px; padding:8px; margin-bottom:8px;}
   .erow.off{opacity:.5;}
-  .erow .ord{display:flex; flex-direction:column; gap:4px;}
-  .erow .ord button{width:34px; height:30px; border:1px solid var(--line); background:var(--panel2);
-    color:var(--txt); border-radius:8px; font-size:14px; cursor:pointer; line-height:1;}
-  .erow .ord button:disabled{opacity:.3;}
+  /* つまんで上下に動かす取っ手。touch-action:none がないと、
+     指で動かしたときにページがスクロールして並べ替えにならない */
+  .erow .grip{flex:none; width:38px; display:flex; align-items:center; justify-content:center;
+    color:var(--sub); font-size:19px; line-height:1; cursor:grab; touch-action:none;
+    border-radius:8px; background:var(--panel2); border:1px solid var(--line);
+    -webkit-user-select:none; user-select:none;}
+  .erow .grip:active{cursor:grabbing;}
+  .erow .grip:focus-visible{outline:2px solid var(--blue); outline-offset:1px;}
+  .erow.drag{opacity:.92; box-shadow:0 10px 24px rgba(0,0,0,.45); position:relative; z-index:5;}
+  .erow.drag .grip{background:var(--blue); color:#052e16; border-color:var(--blue);}
+  /* 落ちる位置を示す線 */
+  .dropline{height:3px; background:var(--accent); border-radius:2px; margin:3px 0;}
   .erow .ebody{flex:1; min-width:0; display:flex; flex-direction:column; gap:6px;}
   .erow .etop{display:flex; align-items:center; gap:6px;}
   .erow .ename,.erow .eprice{background:var(--bg); color:var(--txt); border:1px solid var(--line);
@@ -462,7 +477,7 @@
 <body>
   <div class="tabs">
     <button class="tab active" data-tab="register">🧾 レジ</button>
-    <button class="tab" data-tab="sales">📊 売上 <span class="dot" id="tabCount"></span></button>
+    <button class="tab" data-tab="sales">📊 売上</button>
     <button class="tab" data-tab="settings">⚙️ 設定</button>
   </div>
 
@@ -634,7 +649,7 @@
     {id:"p10",name:"サワー",         price:500, on:true},
     {id:"p9", name:"クラフトビール", price:600, on:true},
   ];
-  const APP_VERSION = "1.21";          // 画面下部に表示。仕様書の版数と揃える
+  const APP_VERSION = "1.22";          // 画面下部に表示。仕様書の版数と揃える
   const STORE  = "regmock_txns_v2";   // 会計履歴（形式は従来どおり）
   const DSTORE = "regmock_disc_v3";   // 値引き（商品IDキー）
   // v2：初期メニューを9品に入れ替えたため、キーを上げて新しい既定を配る。
@@ -1057,7 +1072,8 @@
     document.getElementById("resetCart").disabled = !any && received===0;
     // 当日の客数。テストデータは実績ではないので数えない
     const todays = txns.filter(t=>!t.test && t.date===bd.value).length;
-    document.getElementById("custs").textContent = "👤 "+todays+"人";
+    document.getElementById("custs").innerHTML =
+      '<span class="i">👤</span>'+todays+'<span class="u">人</span>';
 
     const change=received-net;
     const cb=document.getElementById("changebox"), ch=document.getElementById("change");
@@ -1237,10 +1253,8 @@
   function renderEdit(){
     editEl.innerHTML = PRODUCTS.length ? PRODUCTS.map((p,i)=>`
       <div class="erow ${p.on?"":"off"}" data-id="${esc(p.id)}">
-        <div class="ord">
-          <button data-a="up" ${i===0?"disabled":""} aria-label="上へ">↑</button>
-          <button data-a="down" ${i===PRODUCTS.length-1?"disabled":""} aria-label="下へ">↓</button>
-        </div>
+        <div class="grip" tabindex="0" role="button"
+             aria-label="${esc(p.name)} を並べ替え。つまんで上下に動かすか、上下キーを押してください">⠿</div>
         <div class="ebody">
           <div class="etop">
             <input class="ename" type="text" value="${esc(p.name)}" placeholder="商品名" maxlength="20">
@@ -1276,9 +1290,7 @@
     const i=PRODUCTS.findIndex(x=>x.id===id); if(i<0) return;
     const a=b.dataset.a;
     let msg="";
-    if(a==="up" && i>0){ const t=PRODUCTS[i-1]; PRODUCTS[i-1]=PRODUCTS[i]; PRODUCTS[i]=t; }
-    else if(a==="down" && i<PRODUCTS.length-1){ const t=PRODUCTS[i+1]; PRODUCTS[i+1]=PRODUCTS[i]; PRODUCTS[i]=t; }
-    else if(a==="tgl"){
+    if(a==="tgl"){
       const p=PRODUCTS[i];
       p.on=!p.on;
       if(!p.on){                                 // 無効にしたら、押していた個数と値引きは戻す
@@ -1307,6 +1319,70 @@
     saveProducts(); renderEdit(); buildProducts(); render();
     if(msg) showToast(msg,1400);
   });
+  /* ===== 商品の並べ替え（つまんで移動） =====
+     行は動かさず、つまんだ行だけを指に追従させ、落ちる位置に線を出す。
+     離したときに配列を入れ替えて描き直す。DOMを動かしながらだと
+     座標の基準がずれて挙動が不安定になるため。 */
+  function moveProduct(from, to){
+    if(to<0 || to>=PRODUCTS.length || from===to) return false;
+    const [p]=PRODUCTS.splice(from,1);
+    PRODUCTS.splice(to,0,p);
+    saveProducts(); renderEdit(); buildProducts(); render();
+    return true;
+  }
+
+  let dragging=null;
+  editEl.addEventListener("pointerdown", e=>{
+    const grip=e.target.closest(".grip"); if(!grip) return;
+    const row=grip.closest(".erow"); if(!row) return;
+    e.preventDefault();
+    const rows=[...editEl.querySelectorAll(".erow")];
+    dragging={
+      row, grip, id:row.dataset.id, startY:e.clientY, pid:e.pointerId,
+      from:rows.indexOf(row),
+      rects:rows.map(r=>r.getBoundingClientRect()),
+      line:document.createElement("div"), target:rows.indexOf(row)
+    };
+    dragging.line.className="dropline";
+    grip.setPointerCapture(e.pointerId);
+    row.classList.add("drag");
+  });
+  editEl.addEventListener("pointermove", e=>{
+    if(!dragging || e.pointerId!==dragging.pid) return;
+    dragging.row.style.transform = "translateY("+(e.clientY-dragging.startY)+"px)";
+    const y=e.clientY, R=dragging.rects;
+    let t=R.findIndex(r=>y < r.top + r.height/2);
+    if(t<0) t=R.length;
+    dragging.target=t;
+    const rows=[...editEl.querySelectorAll(".erow")];
+    if(t>=rows.length) editEl.appendChild(dragging.line);
+    else editEl.insertBefore(dragging.line, rows[t]);
+  });
+  function endDrag(e){
+    if(!dragging || (e && e.pointerId!==dragging.pid)) return;
+    const {row,from}=dragging; let to=dragging.target;
+    row.style.transform=""; row.classList.remove("drag");
+    dragging.line.remove();
+    if(to>from) to--;                       // 自分を抜いた分だけ詰まる
+    dragging=null;
+    moveProduct(from,to);
+  }
+  editEl.addEventListener("pointerup", endDrag);
+  editEl.addEventListener("pointercancel", endDrag);
+
+  /* キーボードでも動かせるようにする（取っ手を選んで上下キー） */
+  editEl.addEventListener("keydown", e=>{
+    const grip=e.target.closest(".grip"); if(!grip) return;
+    if(e.key!=="ArrowUp" && e.key!=="ArrowDown") return;
+    e.preventDefault();
+    const id=grip.closest(".erow").dataset.id;
+    const i=PRODUCTS.findIndex(x=>x.id===id); if(i<0) return;
+    if(moveProduct(i, i + (e.key==="ArrowUp" ? -1 : 1))){
+      const next=editEl.querySelector('.erow[data-id="'+CSS.escape(id)+'"] .grip');
+      if(next) next.focus();
+    }
+  });
+
   document.getElementById("addProd").addEventListener("click", ()=>{
     PRODUCTS.push({id:newId(), name:"新しい商品", price:500, on:true});
     saveProducts(); renderEdit(); buildProducts(); render();
@@ -1869,7 +1945,7 @@
     document.getElementById("grandCount").textContent=txns.length;
     const days=[...new Set(txns.map(t=>t.date))];
     document.getElementById("grandDays").textContent=days.length;
-    document.getElementById("tabCount").textContent=txns.length?"("+txns.length+")":"";
+
 
     renderBackup();
 
