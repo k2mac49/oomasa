@@ -11,11 +11,25 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>屋台レジ</title>
 <style>
+  /* 暗いところ向け（既定） */
   :root{
     --bg:#0f172a; --panel:#1e293b; --panel2:#334155; --line:#475569;
     --txt:#f1f5f9; --sub:#94a3b8; --accent:#22c55e; --accent2:#16a34a;
     --warn:#ef4444; --blue:#38bdf8; --key:#334155; --keyactive:#475569;
     --hz1:#f5c400; --hz2:#111;
+    --on-accent:#052e16;   /* 緑・青のボタンに乗せる文字 */
+    --grid:rgba(148,163,184,.18);
+  }
+  /* 屋外向け。直射日光の下では白文字が読めないため、黒文字・白地にする。
+     明るさを稼ぐより、コントラストを上げるほうが効く。 */
+  body[data-theme="light"]{
+    --bg:#eef2f6; --panel:#ffffff; --panel2:#dce4ec; --line:#8da0b0;
+    --txt:#0b1620; --sub:#44586a; --accent:#15803d; --accent2:#166534;
+    --warn:#be2318; --blue:#0b5f93; --key:#ffffff; --keyactive:#c8d4df;
+    --hz1:#f5c400; --hz2:#111;
+    --on-accent:#ffffff;
+    --grid:rgba(68,88,106,.22);
+    color-scheme:light;
   }
   /* touch-action:manipulation … ダブルタップ拡大だけを無効にする。
      連打しても画面が拡大しない。ピンチ操作と通常のスクロールは従来どおり残る。 */
@@ -54,6 +68,13 @@
   /* 商品一覧の高さを食うので、文字も余白もぎりぎりまで詰める。
      名前を間違えたまま記録し続ける事故を防ぐのが目的で、読めれば足りる */
   .evbar{flex-basis:100%; display:flex; align-items:center; flex-wrap:wrap; gap:6px; line-height:1;}
+  /* 幅に余裕があれば、合計金額の左に固定幅で置く。
+     1行に収まるぶん商品一覧の高さが稼げる。 */
+  @media (min-width:600px){
+    .evbar{flex:0 0 150px; flex-direction:column; align-items:flex-start;
+      flex-wrap:nowrap; gap:2px; min-width:0; overflow:hidden;}
+    .evbar .evname{max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  }
   .evbar .bd{font-size:11px; color:var(--sub); font-weight:700;}
   .evbar .evname{padding:2px 8px; font-size:12px;}
   /* 当日（選択中の営業日）の客数＝会計件数。1会計＝1組として数える */
@@ -91,15 +112,17 @@
   /* 単価は普段は出さない（小さくて読めず場所を食うため）。値引き中だけ表示する */
   .product .price{font-size:13px; line-height:1.2; margin-top:1px;}
   .product .price:empty{display:none;}
-  .product .price s{color:#64748b; margin-right:5px;}
+  .product .price s{color:var(--sub); margin-right:5px;}
   .product .price .now{color:var(--warn); font-weight:800;}
   .ctrl{display:flex; align-items:center; gap:4px;}
   .ctrl .sub{font-size:12px; font-weight:700; color:var(--sub); min-width:44px; text-align:right;}
+  /* 商品ごとの小計を消す。個数と単価が分かれば足りる、という人向け */
+  body[data-sub="off"] .ctrl .sub{display:none;}
   /* 高さを下げた分は幅で補う（指で押す面積は保ちつつ、1行を低くして品数を稼ぐ） */
   .ctrl button{width:64px; height:50px; border:1px solid var(--line); background:var(--panel2);
     color:var(--txt); font-size:30px; border-radius:12px; cursor:pointer; line-height:1;}
   .ctrl button:active{background:var(--keyactive); transform:scale(.94);}
-  .ctrl .plus{background:var(--accent2); border-color:var(--accent2); color:#052e16; font-weight:900;}
+  .ctrl .plus{background:var(--accent2); border-color:var(--accent2); color:var(--on-accent); font-weight:900;}
   .ctrl .count{min-width:30px; text-align:center; font-size:22px; font-weight:800;}
   .ctrl button:disabled{opacity:.35;}
 
@@ -129,14 +152,14 @@
   .keypad button{font-size:26px; font-weight:700; border:1px solid var(--line);
     background:var(--key); color:var(--txt); border-radius:11px; cursor:pointer;}
   .keypad button:active{background:var(--keyactive); transform:scale(.97);}
-  .keypad .fn{background:#475569; font-size:19px;}
+  .keypad .fn{background:var(--keyactive); font-size:19px;}
   .keypad .clr{color:var(--warn);}
   /* スクロールしても会計ボタンは常に見える */
   .actions{display:grid; grid-template-columns:1fr 1.3fr; gap:6px; flex-shrink:0;
     position:sticky; bottom:0; background:var(--bg); padding-top:6px;}
   .actions button{height:60px; border:0; border-radius:12px; font-size:18px; font-weight:800; cursor:pointer;}
   .btn-clear{background:var(--panel2); color:var(--txt);}
-  .btn-pay{background:var(--accent); color:#052e16;}
+  .btn-pay{background:var(--accent); color:var(--on-accent);}
   .btn-pay:disabled{opacity:.4;}
   .actions button:active{transform:scale(.98);}
 
@@ -200,9 +223,11 @@
      以前はここだけ560px・あちらが700pxと食い違っていたため、その間の高さでは
      カードは効くのに左右2列にならず、商品が全幅6列＋電卓はスワイプ、という
      想定していない見え方になっていた（iPad mini 8.3 を Safari で開いた場合）。 */
-  @media (orientation:landscape) and (min-width:900px) and (min-height:601px){
-    body[data-view="card"] .products{display:grid; grid-template-columns:repeat(auto-fill,minmax(172px,1fr));
-      align-content:start; gap:8px;}
+  /* カード式は選んだら常に効かせる（縦でも横でも）。
+     1枚の最小幅だけ決めて、入る枚数は画面任せにする。 */
+  body[data-view="card"] .products{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+    align-content:start; gap:8px;}
+  @media (min-width:0px){
     /* min-height:0 を付けると、グリッドの行が中身より小さく計算され、
        ±ボタンがカードの下にはみ出す（カード83px・中身134px になっていた）。
        グリッド項目では外すこと。 */
@@ -219,14 +244,23 @@
     body[data-view="card"] .ctrl button{width:100%; height:64px; font-size:34px;}
     body[data-view="card"] .ctrl .count{min-width:40px; font-size:26px;}
   }
+  /* スマホなど狭い画面では、押しやすさを保ちつつ1枚を低くする */
+  @media (max-width:599px){
+    body[data-view="card"] .products{grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:6px;}
+    body[data-view="card"] .product{padding:8px; gap:6px;}
+    body[data-view="card"] .product .name{font-size:17px;}
+    body[data-view="card"] .ctrl button{height:52px; font-size:28px;}
+    body[data-view="card"] .ctrl .count{min-width:32px; font-size:22px;}
+  }
 
   /* 設定：表示の切り替え・テストデータ */
+  .pickh{font-size:13px; font-weight:800; color:var(--sub); margin:16px 0 6px;}
   .pick{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;}
   .pick button,.testact button{height:50px; border:1px solid var(--line); background:var(--bg); color:var(--txt);
     border-radius:11px; font-size:15px; font-weight:800; cursor:pointer; font-family:inherit;}
-  .pick button.on{background:var(--accent2); border-color:var(--accent2); color:#052e16;}
+  .pick button.on{background:var(--accent2); border-color:var(--accent2); color:var(--on-accent);}
   .testact{display:grid; grid-template-columns:1fr 1fr 0.8fr; gap:8px; margin-bottom:8px;}
-  .testact .add{background:var(--blue); border-color:var(--blue); color:#052e16;}
+  .testact .add{background:var(--blue); border-color:var(--blue); color:var(--on-accent);}
   .testact .del{color:var(--warn); border-color:var(--warn);}
   .testinfo{font-size:13px; color:var(--sub);}
 
@@ -247,7 +281,7 @@
   .anlchip{display:inline-flex; align-items:center; gap:6px; border:1px solid var(--line); background:var(--bg);
     color:var(--txt); border-radius:999px; padding:7px 11px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit;}
   .anlchip i{width:11px; height:11px; border-radius:3px; display:inline-block;}
-  .anlchip.off{color:#64748b; text-decoration:line-through;}
+  .anlchip.off{color:var(--sub); text-decoration:line-through;}
   .anlchip.off i{opacity:.25;}
   .anlchip.all{border-style:dashed; color:var(--sub);}
   .anlsum{font-size:13px; color:var(--sub);}
@@ -278,7 +312,7 @@
   .anldet table{width:100%; border-collapse:collapse;}
   .anldet td{padding:4px 3px; border-bottom:1px solid var(--line); color:var(--txt);}
   .anldet td:nth-child(n+2){text-align:right; white-space:nowrap;}
-  .anldet tr.off td{color:#64748b;}
+  .anldet tr.off td{color:var(--sub);}
   .anldet i{width:10px; height:10px; border-radius:3px; display:inline-block; margin-right:6px;}
 
   /* ===== 売上ページ ===== */
@@ -305,7 +339,7 @@
   .bku .sub2.ng{color:var(--warn); font-weight:700;}
 
   .act{display:flex; gap:8px; flex-wrap:wrap;}
-  .btn-export{flex:1; background:var(--blue); color:#052e16; border:0; border-radius:10px;
+  .btn-export{flex:1; background:var(--blue); color:var(--on-accent); border:0; border-radius:10px;
     padding:12px; font-size:15px; font-weight:800; cursor:pointer;}
   /* 全消去を止めたときに、書き出しボタンを一瞬光らせて誘導する */
   .btn-export.urge{animation:urge .5s ease-in-out 4;}
@@ -346,13 +380,13 @@
   .eved .evedbtn button{border:1px solid var(--line); background:var(--panel); color:var(--txt);
     border-radius:8px; padding:0 14px; min-height:38px; font-size:14px; font-weight:700;
     font-family:inherit; cursor:pointer;}
-  .eved .evedbtn .ok{background:var(--accent); border-color:var(--accent); color:#052e16;}
+  .eved .evedbtn .ok{background:var(--accent); border-color:var(--accent); color:var(--on-accent);}
   .evedc{flex-basis:100%; display:flex; flex-wrap:wrap; gap:6px; align-items:center;}
   .evedc .lbl{font-size:11px; color:var(--sub);}
   .evchips{flex-basis:100%; display:flex; flex-wrap:wrap; gap:6px;}
   .evchip{border:1px solid var(--line); background:var(--bg); color:var(--txt); border-radius:999px;
     padding:8px 14px; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit;}
-  .evchip.on{background:var(--blue); border-color:var(--blue); color:#052e16;}
+  .evchip.on{background:var(--blue); border-color:var(--blue); color:var(--on-accent);}
   .evadd{border:1px dashed var(--line); background:transparent; color:var(--sub); border-radius:999px;
     padding:8px 14px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit;}
   .daybody{padding:11px 12px; display:flex; gap:14px; flex-wrap:wrap;}
@@ -417,7 +451,7 @@
   .erow .grip:active{cursor:grabbing;}
   .erow .grip:focus-visible{outline:2px solid var(--blue); outline-offset:1px;}
   .erow.drag{opacity:.92; box-shadow:0 10px 24px rgba(0,0,0,.45); position:relative; z-index:5;}
-  .erow.drag .grip{background:var(--blue); color:#052e16; border-color:var(--blue);}
+  .erow.drag .grip{background:var(--blue); color:var(--on-accent); border-color:var(--blue);}
   /* 落ちる位置を示す線 */
   .dropline{height:3px; background:var(--accent); border-radius:2px; margin:3px 0;}
   .erow .ebody{flex:1; min-width:0; display:flex; flex-direction:column; gap:6px;}
@@ -429,12 +463,12 @@
   .erow .eprice{flex:0 0 82px; width:82px; text-align:right; font-weight:800;}
   .erow .esub{display:flex; align-items:center; gap:8px;}
   .erow .tgl{min-width:86px; text-align:center;}
-  .erow .tgl.on{background:var(--accent2); color:#052e16; border-color:var(--accent2);}
+  .erow .tgl.on{background:var(--accent2); color:var(--on-accent); border-color:var(--accent2);}
   .erow .tgl.off{color:var(--sub);}
   .erow .mini{height:36px; padding:0 11px; border:1px solid var(--line); background:var(--bg);
     color:var(--txt); border-radius:9px; font-size:13px; font-weight:800; cursor:pointer; white-space:nowrap;}
   .erow .mini.del{margin-left:auto; color:var(--warn); border-color:var(--warn);}
-  .btn-add{width:100%; background:var(--accent); color:#052e16; border:0; border-radius:10px;
+  .btn-add{width:100%; background:var(--accent); color:var(--on-accent); border:0; border-radius:10px;
     padding:13px; font-size:15px; font-weight:800; cursor:pointer;}
   .appinfo{text-align:center; padding:18px 0 6px; color:var(--sub); line-height:1.7; flex-shrink:0;}
   .appinfo .nm{font-size:13px; font-weight:700;}
@@ -468,7 +502,7 @@
   #sectDisc .sectbody .note{margin:12px 0 0;}
 
   .toast{position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(18px);
-    background:var(--accent); color:#052e16; font-weight:800; padding:12px 22px;
+    background:var(--accent); color:var(--on-accent); font-weight:800; padding:12px 22px;
     border-radius:999px; opacity:0; transition:.25s; pointer-events:none; font-size:15px; z-index:30;}
   .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
   .toast.err{background:var(--warn); color:#fff;}
@@ -605,8 +639,21 @@
           <button type="button" data-v="list">☰ 表形式</button>
           <button type="button" data-v="card">▦ カード式</button>
         </div>
-        <p class="note">カード式は<b>タブレットを横置きにしたときだけ</b>効きます。
-          スマホや縦置きでは、カード式を選んでいても表形式で表示します。</p>
+        <p class="note">カード式は縦向きでも効きます。画面に入る枚数は幅に合わせて変わります。</p>
+
+        <h4 class="pickh">商品ごとの小計</h4>
+        <div class="pick" id="subPick">
+          <button type="button" data-s="on">表示する</button>
+          <button type="button" data-s="off">消す</button>
+        </div>
+        <p class="note">個数の左に出る「その商品だけの金額」です。合計さえ見えれば十分なら消せます。</p>
+
+        <h4 class="pickh">画面の色</h4>
+        <div class="pick" id="themePick">
+          <button type="button" data-t="dark">🌙 暗い背景</button>
+          <button type="button" data-t="light">☀️ 明るい背景</button>
+        </div>
+        <p class="note">屋外の明るいところでは、白文字より<b>黒文字のほう</b>が読めます。日向に出る日は明るい背景にしてください。</p>
       </div>
     </details>
 
@@ -649,7 +696,7 @@
     {id:"p10",name:"サワー",         price:500, on:true},
     {id:"p9", name:"クラフトビール", price:600, on:true},
   ];
-  const APP_VERSION = "1.22";          // 画面下部に表示。仕様書の版数と揃える
+  const APP_VERSION = "1.23";          // 画面下部に表示。仕様書の版数と揃える
   const STORE  = "regmock_txns_v2";   // 会計履歴（形式は従来どおり）
   const DSTORE = "regmock_disc_v3";   // 値引き（商品IDキー）
   // v2：初期メニューを9品に入れ替えたため、キーを上げて新しい既定を配る。
@@ -658,11 +705,15 @@
   const BSTORE = "regmock_backup_v1"; // 最後にCSVへ書き出した記録
   const MSTORE = "regmock_migrations"; // 既定メニュー変更のうち、この端末へ適用済みのもの
   const VSTORE = "regmock_view_v1";    // レジの表示形式 "list" | "card"
+  const SBSTORE = "regmock_sub_v1";    // 商品ごとの小計を出すか "on" | "off"
+  const THSTORE = "regmock_theme_v1";  // 画面の色 "dark" | "light"
   const ASTORE = "regmock_anl_v1";     // グラフの表示設定 {bin, met, line, hidden:[商品名]}
   const FSTORE = "regmock_fold_v1";    // 売上の日ごとの開閉 { "item:YYYY-MM-DD":true/false, "txn:…":… }
   const ESTORE = "regmock_events_v1";  // 営業日ごとのイベント { "YYYY-MM-DD": { list:[名前…], cur:"選択中" } }
 
   const yen = n => "¥" + n.toLocaleString("ja-JP");
+  // CSS変数の値を取る（canvas の色をテーマに追従させるため）
+  const cssVar = k => getComputedStyle(document.body).getPropertyValue(k).trim();
   const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const sel = id => `[data-id="${CSS.escape(id)}"]`;
 
@@ -1244,9 +1295,44 @@
     viewMode=b.dataset.v;
     try{ localStorage.setItem(VSTORE, viewMode); }catch(e){ showToast("⚠️ 表示設定を保存できませんでした",3000,true); }
     applyView(); drawViewPick();
-    showToast(viewMode==="card" ? "カード式にしました（タブレット横置きで有効）" : "表形式にしました",1600);
+    showToast(viewMode==="card" ? "カード式にしました" : "表形式にしました",1600);
   });
   applyView();
+
+  /* 商品ごとの小計を出すか */
+  let subMode = (function(){ try{ return localStorage.getItem(SBSTORE)==="off" ? "off" : "on"; }catch(e){ return "on"; } })();
+  function applySub(){ document.body.dataset.sub = subMode; }
+  function drawSubPick(){
+    document.querySelectorAll("#subPick button").forEach(b=>b.classList.toggle("on", b.dataset.s===subMode));
+  }
+  document.getElementById("subPick").addEventListener("click", e=>{
+    const b=e.target.closest("button[data-s]"); if(!b) return;
+    subMode=b.dataset.s;
+    try{ localStorage.setItem(SBSTORE, subMode); }catch(e){ showToast("⚠️ 表示設定を保存できませんでした",3000,true); }
+    applySub(); drawSubPick();
+    showToast(subMode==="off" ? "商品ごとの小計を消しました" : "商品ごとの小計を表示します",1500);
+  });
+  applySub();
+
+  /* 画面の色（屋外では明るい背景のほうが読める） */
+  let theme = (function(){ try{ return localStorage.getItem(THSTORE)==="light" ? "light" : "dark"; }catch(e){ return "dark"; } })();
+  function applyTheme(){
+    document.body.dataset.theme = theme;
+    const m=document.querySelector('meta[name="theme-color"]');
+    if(m) m.content = theme==="light" ? "#eef2f6" : "#0f172a";
+    if(typeof drawAnl==="function"){ try{ drawAnl(); }catch(e){} }   // グラフも描き直す
+  }
+  function drawThemePick(){
+    document.querySelectorAll("#themePick button").forEach(b=>b.classList.toggle("on", b.dataset.t===theme));
+  }
+  document.getElementById("themePick").addEventListener("click", e=>{
+    const b=e.target.closest("button[data-t]"); if(!b) return;
+    theme=b.dataset.t;
+    try{ localStorage.setItem(THSTORE, theme); }catch(e){ showToast("⚠️ 表示設定を保存できませんでした",3000,true); }
+    applyTheme(); drawThemePick();
+    showToast(theme==="light" ? "明るい背景にしました" : "暗い背景にしました",1500);
+  });
+  applyTheme();
 
   /* ===== 設定：商品と金額の編集 ===== */
   const editEl=document.getElementById("prodEdit");
@@ -1640,7 +1726,9 @@
     anlCv.width=Math.round(W*dpr); anlCv.height=Math.round(H*dpr); anlCv.style.height=H+"px";
     const g=anlCv.getContext("2d"); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,W,H);
     g.font="12px -apple-system,'Hiragino Kaku Gothic ProN',sans-serif";
-    if(!D){ g.fillStyle="#94a3b8"; g.textAlign="center"; g.textBaseline="middle"; g.fillText("データがありません",W/2,H/2); return; }
+    // 色は CSS 変数から取る（ライト／ダークの切替に追従させるため）
+    const CSUB=cssVar("--sub"), CTXT=cssVar("--txt"), CBG=cssVar("--bg"), CGRID=cssVar("--grid");
+    if(!D){ g.fillStyle=CSUB; g.textAlign="center"; g.textBaseline="middle"; g.fillText("データがありません",W/2,H/2); return; }
 
     const src = anl.met==="qty" ? D.qty : D.amt;
     const isTotal = anl.view==="total";
@@ -1666,12 +1754,12 @@
     g.textBaseline="middle";
     for(let i=0;i<=N;i++){
       const v=yMax*i/N, y=Y(v);
-      g.strokeStyle= i===0 ? "#64748b" : "rgba(148,163,184,.18)"; g.lineWidth=1;
+      g.strokeStyle= i===0 ? CSUB : CGRID; g.lineWidth=1;
       g.beginPath(); g.moveTo(L,Math.round(y)+.5); g.lineTo(L+pw,Math.round(y)+.5); g.stroke();
-      g.fillStyle="#94a3b8"; g.textAlign="right"; g.fillText(shortV(v),L-6,y);
+      g.fillStyle=CSUB; g.textAlign="right"; g.fillText(shortV(v),L-6,y);
     }
     if(useR){   // 右目盛りは独自の刻み。横線は引かず、軸の小さな目盛りだけ付ける
-      g.strokeStyle="#94a3b8"; g.fillStyle="#f1f5f9"; g.textAlign="left";
+      g.strokeStyle=CSUB; g.fillStyle=CTXT; g.textAlign="left";
       g.beginPath(); g.moveTo(L+pw+.5,T); g.lineTo(L+pw+.5,T+ph); g.stroke();
       for(let i=0;i<=NR;i++){
         const y=Math.round(YR(stepR*i))+.5;
@@ -1696,16 +1784,16 @@
       });
       // 商品の境目：背景色の細線で区切る（色が近くても段が分かるように）
       if(seams.length){
-        g.strokeStyle="#0f172a"; g.lineWidth=1.5; g.beginPath();
+        g.strokeStyle=CBG; g.lineWidth=1.5; g.beginPath();
         seams.forEach(y=>{ g.moveTo(x,y); g.lineTo(x+w,y); }); g.stroke(); g.lineWidth=1;
       }
     }
     drawTimeAxis(g, D, L, bw, T+ph, pw);
     if(useR){   // 全商品の累計（枠の終わりの時点）
       const pts = [[L,YR(0)], ...cum.map((v,i)=>[L+(i+1)*bw, YR(v)])];
-      g.strokeStyle="#f1f5f9"; g.lineWidth=2; g.lineJoin="round"; g.beginPath();
+      g.strokeStyle=CTXT; g.lineWidth=2; g.lineJoin="round"; g.beginPath();
       pts.forEach(([x,y],i)=> i?g.lineTo(x,y):g.moveTo(x,y)); g.stroke();
-      if(bw>=10){ g.fillStyle="#f1f5f9"; pts.forEach(([x,y])=>{ g.beginPath(); g.arc(x,y,2.6,0,Math.PI*2); g.fill(); }); }
+      if(bw>=10){ g.fillStyle=CTXT; pts.forEach(([x,y])=>{ g.beginPath(); g.arc(x,y,2.6,0,Math.PI*2); g.fill(); }); }
       g.lineWidth=1;
     }
   }
@@ -2063,7 +2151,7 @@
       renderEdit();
       // 開いたまま他タブへ行って戻った場合も、最新の値引き状態で描き直す
       if(document.getElementById("sectDisc").open) resetDraft();
-      if(document.getElementById("sectView").open) drawViewPick();
+      if(document.getElementById("sectView").open){ drawViewPick(); drawSubPick(); drawThemePick(); }
       if(document.getElementById("sectTest").open) drawTestInfo();
     }
     // レジに戻ったときは必ず商品ページから始める（電卓のまま戻らない）
