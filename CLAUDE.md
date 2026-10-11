@@ -35,6 +35,12 @@ grep -o 'APP_VERSION = "[0-9.]*"' index.html
 （`仕様書.md` 冒頭の「Deveropment\oomasa\regi」という記載は古い）。
 
 ## 構成
+- `regi-offline.html` … 完全オフライン版（**自動生成物。直接編集しない**）
+  `node build-offline.js` で index.html から作る。index.html を直したら毎回作り直すこと。
+  manifest と Service Worker を外し、アイコンを data URI で埋め込んでファイル1つに。
+  localStorage が使えない環境では起動時に止める（file:// は端末により保存不可のため）。
+- `dl.html` … そのダウンロード案内ページ
+- `build-offline.js` … 上記の生成スクリプト
 - `index.html` … UI・ロジック・CSS をすべて内包した単一ファイル
 - `sw.js` … Service Worker（HTMLはネット優先、2.5秒でキャッシュに切替）
 - `manifest.json` / アイコン類

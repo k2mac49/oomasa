@@ -2,36 +2,81 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
 <title>屋台レジ ダウンロード</title>
 <style>
-  *{box-sizing:border-box; margin:0; padding:0;}
-  body{background:#0f172a; color:#f1f5f9; font-family:sans-serif; padding:24px 16px; line-height:1.6;}
-  h1{font-size:22px; margin-bottom:6px;}
-  p{font-size:15px; color:#cbd5e1; margin-bottom:14px;}
-  a.btn{display:block; text-align:center; text-decoration:none; font-size:20px; font-weight:bold;
-    padding:20px 10px; border-radius:14px; margin-bottom:14px;}
-  .dl{background:#22c55e; color:#052e16;}
-  .open{background:#334155; color:#f1f5f9; font-size:16px !important;}
-  ol{margin:0 0 14px 22px; font-size:15px; color:#cbd5e1;}
-  li{margin-bottom:6px;}
-  .note{font-size:13px; color:#94a3b8;}
+  :root{--bg:#0f172a; --panel:#1e293b; --line:#475569; --txt:#f1f5f9; --sub:#94a3b8;
+        --accent:#22c55e; --warn:#ef4444; --blue:#38bdf8;}
+  *{box-sizing:border-box; margin:0;}
+  body{background:var(--bg); color:var(--txt); line-height:1.85;
+    font-family:-apple-system,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+    padding:24px 18px 60px;}
+  .wrap{max-width:560px; margin:0 auto;}
+  h1{font-size:22px; font-weight:900; line-height:1.4; margin-bottom:4px;}
+  .ver{font-size:13px; color:var(--sub); margin-bottom:22px;}
+  a.dl{display:block; background:var(--accent); color:#052e16; text-align:center;
+    font-size:18px; font-weight:900; padding:18px 12px; border-radius:12px;
+    text-decoration:none; margin-bottom:8px;}
+  .cap{font-size:12px; color:var(--sub); text-align:center; margin-bottom:24px;}
+  h2{font-size:15px; font-weight:800; margin:24px 0 8px; padding-top:18px;
+    border-top:1px solid var(--line);}
+  p{font-size:14px; color:#cbd5e1; margin-bottom:10px;}
+  ol,ul{font-size:14px; color:#cbd5e1; padding-left:1.3em; margin-bottom:10px;}
+  li{margin-bottom:7px;}
+  b{color:var(--txt);}
+  .box{background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding:14px 16px; margin-bottom:14px;}
+  .box.warn{border-color:var(--warn); background:rgba(239,68,68,.10);}
+  .box h3{font-size:14px; font-weight:800; margin-bottom:6px;}
+  .box.warn h3{color:var(--warn);}
+  .box p:last-child{margin-bottom:0;}
+  a{color:var(--blue);}
+  .try{display:block; text-align:center; text-decoration:none; background:#334155;
+    color:var(--txt); font-size:14px; font-weight:700; padding:13px; border-radius:10px;
+    margin-bottom:8px;}
 </style>
 </head>
 <body>
+<div class="wrap">
+
   <h1>🧾 屋台レジ（完全オフライン版）</h1>
-  <p>下のボタンでアプリのファイルをこのタブレットに保存します。保存後はネットなしで使えます。</p>
+  <div class="ver">v1.21 オフライン版 ／ RazyLab</div>
 
-  <a class="btn dl" href="regi-offline.html" download="regi-offline.html">⬇ アプリを保存する</a>
+  <a class="dl" href="regi-offline.html" download="屋台レジ.html">⬇ アプリを保存する</a>
+  <div class="cap">HTMLファイル1つ・約130KB。保存後はネットなしで動きます。</div>
 
+  <div class="box warn">
+    <h3>必ず事前に試してください</h3>
+    <p>開くアプリによっては、売上が保存されません。<b>当日いきなり使わず、一度会計を打ってから閉じて、開き直して残っているか確かめてください。</b></p>
+    <p>保存できない環境のときは、起動時にその旨を表示して止まるようにしてあります。</p>
+  </div>
+
+  <h2>保存して開く手順（Androidタブレット）</h2>
   <ol>
     <li>上のボタンを押す（「Download」フォルダに保存されます）</li>
-    <li>ファイル管理アプリで「Download」→ <b>regi-offline.html</b> をタップ</li>
-    <li>「<b>Chrome</b>」で開く（HTMLビューアだと売上が保存されません）</li>
-    <li>開いたらブックマークしておくと次から一発</li>
+    <li>ファイル管理アプリで「Download」→ <b>屋台レジ.html</b> を長押し</li>
+    <li>「アプリで開く」から <b>Chrome</b> を選ぶ<br>
+      <span style="color:#94a3b8;font-size:13px">※「HTMLビューア」などで開くと売上が保存されません。必ずChromeで。</span></li>
+    <li>開いたらブックマークしておくと、次から一発で開けます</li>
   </ol>
 
-  <a class="btn open" href="regi-offline.html">（今すぐ試すだけならこちら：ネット上で開く）</a>
-  <p class="note">※ネット上で開いた場合はオフラインでは使えません。現場で使うときは必ず「アプリを保存する」から保存したファイルを開いてください。</p>
+  <h2>通常版との違い</h2>
+  <ul>
+    <li>中身は同じです。商品編集・値引き・売上集計・分析まで全部入っています</li>
+    <li>ファイル1つで完結します。サーバーもネットも要りません</li>
+    <li><b>更新は届きません。</b>新しい版が出たら、このページから取り直してください</li>
+    <li><b>通常版とはデータが別々になります。</b>両方で打つと売上が分かれるので、どちらか一方に決めて使ってください</li>
+  </ul>
+
+  <h2>通常版を使う場合</h2>
+  <p><a href="./">https://k2mac49.github.io/oomasa/</a> を一度オンラインで開いておけば、その後は電波が無くても起動します。ホーム画面に追加しておくとより確実です。</p>
+  <a class="try" href="regi-offline.html">オフライン版をこの場で試す（保存せずに開く）</a>
+  <p style="font-size:13px;color:#94a3b8">※この場で開いた場合はネット経由なので、現場では使えません。動作を見るだけ用です。</p>
+
+  <h2>売上を残す</h2>
+  <p>どちらの版でも、データはその端末の中だけに保存されます。<b>営業が終わったら必ず売上タブから CSV を書き出してください。</b>書き出していない会計があるうちは、全消去できないようにしてあります。</p>
+
+</div>
 </body>
 </html>
