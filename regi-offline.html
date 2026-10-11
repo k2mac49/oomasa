@@ -1,6 +1,6 @@
 <!-- このファイルは build-offline.js が index.html から自動生成したものです。
      直接編集しないでください。直すときは index.html を直して node build-offline.js を実行。
-     生成元: v1.28 -->
+     生成元: v1.29 -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -21,6 +21,7 @@
     --hz1:#f5c400; --hz2:#111;
     --on-accent:#052e16;   /* 緑・青のボタンに乗せる文字 */
     --grid:rgba(148,163,184,.18);
+    --selbg:rgba(34,197,94,.30);   /* カード式で選んだ商品の背景 */
   }
   /* 屋外向け。直射日光の下では白文字が読めないため、黒文字・白地にする。
      明るさを稼ぐより、コントラストを上げるほうが効く。 */
@@ -31,6 +32,7 @@
     --hz1:#f5c400; --hz2:#111;
     --on-accent:#ffffff;
     --grid:rgba(68,88,106,.22);
+    --selbg:#bfe9cd;
     color-scheme:light;
   }
   /* touch-action:manipulation … ダブルタップ拡大だけを無効にする。
@@ -145,16 +147,17 @@
   .changebox .val{font-size:26px; font-weight:900; color:var(--accent);}
   .changebox.short .val{color:var(--warn);}
   .quick{display:grid; grid-template-columns:repeat(3,1fr); gap:6px; flex-shrink:0;}
-  .quick button{height:54px; font-size:17px; font-weight:800; border:1px solid var(--line);
+  .quick button{height:54px; font-size:22px; font-weight:800; border:1px solid var(--line);
     background:var(--bg); color:var(--txt); border-radius:10px; cursor:pointer;}
   .quick button:active{background:var(--panel2);}
   /* min-height で「潰れて消える」ことを防ぐ。入りきらない分はスクロールで見せる */
   .keypad{flex:1 1 auto; min-height:190px; display:grid; grid-template-columns:repeat(3,1fr);
     grid-auto-rows:1fr; gap:6px;}
-  .keypad button{font-size:26px; font-weight:700; border:1px solid var(--line);
+  .keypad button{font-size:28px; font-weight:700; border:1px solid var(--line);
     background:var(--key); color:var(--txt); border-radius:11px; cursor:pointer;}
   .keypad button:active{background:var(--keyactive); transform:scale(.97);}
-  .keypad .fn{background:var(--keyactive); font-size:19px;}
+  /* 00 と ← も数字と同じ大きさ（以前は小さくて押し間違えやすかった） */
+  .keypad .fn{background:var(--keyactive);}
   .keypad .clr{color:var(--warn);}
   /* スクロールしても会計ボタンは常に見える */
   .actions{display:grid; grid-template-columns:1fr 1.3fr; gap:6px; flex-shrink:0;
@@ -188,7 +191,7 @@
     .calc > .keypad {grid-column:2; grid-row:1 / -1; min-height:0;}
     .crow.total .val{font-size:26px;}
     .changebox{padding:5px 12px;}
-    .quick button{height:44px; font-size:16px;}
+    .quick button{height:44px; font-size:18px;}
     .actions button{height:52px;}
   }
 
@@ -215,6 +218,13 @@
     .ctrl button{width:64px; height:58px; font-size:32px;}
     .ctrl .count{min-width:36px; font-size:24px;}
     .ctrl .sub{font-size:13px; min-width:50px;}
+    /* 電卓：タブレットは数字・00・クイック入金を同じくらいの大きさに揃える */
+    .quick button{height:66px; font-size:30px;}
+    .keypad button{font-size:38px;}
+  }
+  /* タブレット縦（幅800前後）は電卓の列が細いので、+10000 が収まる大きさにとどめる */
+  @media (min-width:760px) and (min-height:601px) and (max-width:900px){
+    .quick button{font-size:24px;}
   }
 
   /* ===== カード式（⚙️設定で選択。タブレット横置きのときだけ効く）=====
@@ -235,7 +245,9 @@
        グリッド項目では外すこと。 */
     body[data-view="card"] .product{flex-direction:column; align-items:stretch; justify-content:space-between;
       gap:8px; padding:10px;}
-    body[data-view="card"] .product.has{border-color:var(--accent); background:rgba(34,197,94,.08);}
+    /* 選んだ商品は背景をはっきり変え、枠も内側に太く引く（枠線の太さは変えないので大きさは動かない） */
+    body[data-view="card"] .product.has{border-color:var(--accent); background:var(--selbg);
+      box-shadow:inset 0 0 0 2px var(--accent);}
     body[data-view="card"] #pageRegister.disc .product.on{border-color:var(--warn);}
     body[data-view="card"] .product .info{flex:1; display:flex; flex-direction:column; justify-content:center;
       align-items:center; text-align:center;}
@@ -749,7 +761,7 @@
     {id:"p10",name:"サワー",         price:500, on:true},
     {id:"p9", name:"クラフトビール", price:600, on:true},
   ];
-  const APP_VERSION = "1.28 オフライン版";          // 画面下部に表示。仕様書の版数と揃える
+  const APP_VERSION = "1.29 オフライン版";          // 画面下部に表示。仕様書の版数と揃える
   const STORE  = "regmock_txns_v2";   // 会計履歴（形式は従来どおり）
   const DSTORE = "regmock_disc_v3";   // 値引き（商品IDキー）
   // v2：初期メニューを9品に入れ替えたため、キーを上げて新しい既定を配る。
@@ -1578,17 +1590,51 @@
     return true;
   }
 
+  /* 並べ替え中、指が画面の上端・下端に近づいたら設定画面を自動でスクロールする。
+     位置の計算は「スクロール量を足した座標」で行い、スクロールしてもずれないようにする。
+     rAF は環境によって止まることがあるので setInterval で回す。 */
+  const dragScroller=document.getElementById("pageSettings");
+  const EDGE=70, MAXSPD=16;
+  function dragPlace(){
+    const d=dragging; if(!d) return;
+    const st=dragScroller.scrollTop;
+    d.row.style.transform = "translateY("+((d.lastY+st)-(d.startY+d.startScroll))+"px)";
+    const y=d.lastY+st, R=d.rects;
+    let t=R.findIndex(r=>y < r.top + r.height/2);
+    if(t<0) t=R.length;
+    if(t===d.target && d.line.parentNode) return;
+    d.target=t;
+    const rows=[...editEl.querySelectorAll(".erow")];
+    if(t>=rows.length) editEl.appendChild(d.line);
+    else editEl.insertBefore(d.line, rows[t]);
+  }
+  function dragTick(){
+    const d=dragging; if(!d) return;
+    const b=dragScroller.getBoundingClientRect();
+    const top=Math.max(b.top,0), bot=Math.min(b.bottom, window.innerHeight);
+    let v=0;
+    if(d.lastY < top+EDGE) v=-Math.ceil(MAXSPD*Math.min(1,(top+EDGE-d.lastY)/EDGE));
+    else if(d.lastY > bot-EDGE) v=Math.ceil(MAXSPD*Math.min(1,(d.lastY-(bot-EDGE))/EDGE));
+    if(!v) return;
+    const before=dragScroller.scrollTop;
+    dragScroller.scrollTop=before+v;
+    if(dragScroller.scrollTop!==before) dragPlace();
+  }
+
   let dragging=null;
   editEl.addEventListener("pointerdown", e=>{
     const grip=e.target.closest(".grip"); if(!grip) return;
     const row=grip.closest(".erow"); if(!row) return;
     e.preventDefault();
     const rows=[...editEl.querySelectorAll(".erow")];
+    const st=dragScroller.scrollTop;
     dragging={
-      row, grip, id:row.dataset.id, startY:e.clientY, pid:e.pointerId,
+      row, grip, id:row.dataset.id, startY:e.clientY, lastY:e.clientY, startScroll:st, pid:e.pointerId,
       from:rows.indexOf(row),
-      rects:rows.map(r=>r.getBoundingClientRect()),
-      line:document.createElement("div"), target:rows.indexOf(row)
+      // 行の位置はスクロール量込みの座標で覚える
+      rects:rows.map(r=>{ const b=r.getBoundingClientRect(); return {top:b.top+st, height:b.height}; }),
+      line:document.createElement("div"), target:rows.indexOf(row),
+      timer:setInterval(dragTick,16)
     };
     dragging.line.className="dropline";
     grip.setPointerCapture(e.pointerId);
@@ -1596,18 +1642,13 @@
   });
   editEl.addEventListener("pointermove", e=>{
     if(!dragging || e.pointerId!==dragging.pid) return;
-    dragging.row.style.transform = "translateY("+(e.clientY-dragging.startY)+"px)";
-    const y=e.clientY, R=dragging.rects;
-    let t=R.findIndex(r=>y < r.top + r.height/2);
-    if(t<0) t=R.length;
-    dragging.target=t;
-    const rows=[...editEl.querySelectorAll(".erow")];
-    if(t>=rows.length) editEl.appendChild(dragging.line);
-    else editEl.insertBefore(dragging.line, rows[t]);
+    dragging.lastY=e.clientY;
+    dragPlace();
   });
   function endDrag(e){
     if(!dragging || (e && e.pointerId!==dragging.pid)) return;
     const {row,from}=dragging; let to=dragging.target;
+    clearInterval(dragging.timer);
     row.style.transform=""; row.classList.remove("drag");
     dragging.line.remove();
     if(to>from) to--;                       // 自分を抜いた分だけ詰まる
