@@ -733,7 +733,7 @@
     {id:"p10",name:"サワー",         price:500, on:true},
     {id:"p9", name:"クラフトビール", price:600, on:true},
   ];
-  const APP_VERSION = "1.25";          // 画面下部に表示。仕様書の版数と揃える
+  const APP_VERSION = "1.26";          // 画面下部に表示。仕様書の版数と揃える
   const STORE  = "regmock_txns_v2";   // 会計履歴（形式は従来どおり）
   const DSTORE = "regmock_disc_v3";   // 値引き（商品IDキー）
   // v2：初期メニューを9品に入れ替えたため、キーを上げて新しい既定を配る。
@@ -747,6 +747,11 @@
   const ASTORE = "regmock_anl_v1";     // グラフの表示設定 {bin, met, line, hidden:[商品名]}
   const FSTORE = "regmock_fold_v1";    // 売上の日ごとの開閉 { "item:YYYY-MM-DD":true/false, "txn:…":… }
   const ESTORE = "regmock_events_v1";  // 営業日ごとのイベント { "YYYY-MM-DD": { list:[名前…], cur:"選択中" } }
+
+  /* ===== 同梱している過去の実績 =====
+     scratchpad の gen-past.js が CSV から生成したもの。手で編集しない。
+     n:商品名 / p:定価 / d:[{d:日付, e:イベント名, t:[[開始からの分, 預り金, [[商品番号,個数,(実売単価)]…]]…]}] */
+  const PAST_DATA = {n:[],p:[],d:[]};   // 実データは公開しない。gen-past.js でローカルにだけ入れる
 
   const yen = n => "¥" + n.toLocaleString("ja-JP");
   // CSS変数の値を取る（canvas の色をテーマに追従させるため）
@@ -2349,11 +2354,6 @@
       showToast("未書き出しの会計が "+un+"件 あります。CSVで書き出してください",5000,true);
     }
   },1500);
-
-  /* ===== 同梱している過去の実績 =====
-     scratchpad の gen-past.js が CSV から生成したもの。手で編集しない。
-     n:商品名 / p:定価 / d:[{d:日付, e:イベント名, t:[[開始からの分, 預り金, [[商品番号,個数,(実売単価)]…]]…]}] */
-  const PAST_DATA = {n:[],p:[],d:[]};   // 実データは公開しない。gen-past.js でローカルにだけ入れる
 
   /* PWA */
   if("serviceWorker" in navigator){
