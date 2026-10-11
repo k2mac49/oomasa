@@ -344,6 +344,11 @@
   @keyframes urge{50%{transform:scale(1.04); box-shadow:0 0 0 4px rgba(56,189,248,.45);}}
   .danger{background:transparent; border:1px solid var(--warn); color:var(--warn);
     border-radius:10px; padding:11px 14px; font-size:13px; font-weight:700; cursor:pointer;}
+  .btn-mail{flex:1; background:var(--accent); color:var(--on-accent); border:0; border-radius:10px;
+    padding:12px; font-size:15px; font-weight:800; cursor:pointer;}
+  .act .btn-export,.act .btn-mail{flex:1 1 150px;}
+  .mailin{display:block; width:100%; background:var(--bg); color:var(--txt); border:1px solid var(--line);
+    border-radius:8px; padding:11px 10px; font-size:16px; font-family:inherit; margin-bottom:10px;}
   .danger.locked{opacity:.45; border-color:var(--line); color:var(--sub);}
   .daygroup{background:var(--panel); border:1px solid var(--line); border-radius:12px; overflow:hidden;}
   .dayhead{display:flex; align-items:baseline; gap:10px; padding:11px 12px; background:var(--panel2); flex-wrap:wrap;}
@@ -587,6 +592,7 @@
     <div class="bku" id="bku"></div>
     <div class="act">
       <button class="btn-export" id="exportBtn">⬆ CSVで書き出す／共有</button>
+      <button class="btn-mail" id="mailBtn">✉ メールで送る</button>
       <button class="danger" id="clearData">全消去</button>
     </div>
     <div class="anl" id="anl">
@@ -679,6 +685,17 @@
       </div>
     </details>
 
+    <details class="sect" id="sectMail">
+      <summary>✉ 売上の送付先</summary>
+      <div class="sectbody">
+        <input type="email" class="mailin" id="mailTo" placeholder="例）name@example.com"
+          autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false">
+        <p class="note">売上タブの「✉ メールで送る」で、<b>レジで選んでいる営業日</b>の売上をCSV添付で送ります。
+          件名は「〇月〇日 イベント名 売上報告」です。<br>
+          共有画面で <b>Gmail</b> を選び、宛先欄に<b>貼り付け</b>てから送信してください（宛先はボタンを押した時点でコピーされます）。</p>
+      </div>
+    </details>
+
     <details class="sect" id="sectPast">
       <summary>📚 過去の実績</summary>
       <div class="sectbody">
@@ -714,7 +731,7 @@
     {id:"p10",name:"サワー",         price:500, on:true},
     {id:"p9", name:"クラフトビール", price:600, on:true},
   ];
-  const APP_VERSION = "1.27";          // 画面下部に表示。仕様書の版数と揃える
+  const APP_VERSION = "1.28";          // 画面下部に表示。仕様書の版数と揃える
   const STORE  = "regmock_txns_v2";   // 会計履歴（形式は従来どおり）
   const DSTORE = "regmock_disc_v3";   // 値引き（商品IDキー）
   // v2：初期メニューを9品に入れ替えたため、キーを上げて新しい既定を配る。
@@ -727,12 +744,14 @@
   const THSTORE = "regmock_theme_v1";  // 画面の色 "dark" | "light"
   const ASTORE = "regmock_anl_v1";     // グラフの表示設定 {bin, met, line, hidden:[商品名]}
   const FSTORE = "regmock_fold_v1";    // 売上の日ごとの開閉 { "item:YYYY-MM-DD":true/false, "txn:…":… }
+  const MLSTORE = "regmock_mail_v1";   // 売上メールの送付先（未設定なら MAIL_DEFAULT）
   const ESTORE = "regmock_events_v1";  // 営業日ごとのイベント { "YYYY-MM-DD": { list:[名前…], cur:"選択中" } }
 
   /* ===== 同梱している過去の実績 =====
      scratchpad の gen-past.js が CSV から生成したもの。手で編集しない。
      n:商品名 / p:定価 / d:[{d:日付, e:イベント名, t:[[開始からの分, 預り金, [[商品番号,個数,(実売単価)]…]]…]}] */
   const PAST_DATA = {n:[],p:[],d:[]};   // 実データは公開しない。gen-past.js でローカルにだけ入れる
+  const MAIL_DEFAULT = "";   // 送付先の既定。公開版は空（設定で入れる）。ローカル版は gen-past.js が local.json の値を入れる
 
   const yen = n => "¥" + n.toLocaleString("ja-JP");
   // CSS変数の値を取る（canvas の色をテーマに追従させるため）
@@ -1338,6 +1357,7 @@
     sectDisc: ()=>resetDraft(),     // 開いた瞬間に、いまの値引き状態で編集画面を出す
     sectProd: ()=>renderEdit(),
     sectView: ()=>{ drawViewPick(); drawSubPick(); drawThemePick(); },
+    sectMail: ()=>drawMail(),
     sectPast: ()=>drawPastInfo(),
   };
   document.querySelectorAll("#pageSettings details.sect").forEach(sect=>{
@@ -1599,10 +1619,10 @@
     if(last){ last.scrollIntoView({block:"nearest"}); const inp=last.querySelector(".ename"); inp.focus(); inp.select(); }
   });
   /* ===== CSV ===== */
-  function buildCSV(){
+  function buildCSV(list){
     const head=["日付","イベント","会計No","時刻","商品","通常単価","適用単価","単価値引き","個数","金額","会計小計","会計値引き計","会計合計","預り金","おつり"];
     const rows=[head];
-    txns.slice().sort((a,b)=>(a.date+String(a.id).padStart(6,"0")).localeCompare(b.date+String(b.id).padStart(6,"0")))
+    (list||txns).slice().sort((a,b)=>(a.date+String(a.id).padStart(6,"0")).localeCompare(b.date+String(b.id).padStart(6,"0")))
       .forEach(t=>t.items.forEach((it,idx)=>{
         const unit=(it.unit!=null?it.unit:it.price);
         rows.push([t.date,t.event||"",t.id,t.time,it.name,it.price,unit,it.price-unit,it.count,unit*it.count,
@@ -1631,6 +1651,119 @@
     showToast("CSVを書き出しました",1400);
   }
   document.getElementById("exportBtn").addEventListener("click", exportCSV);
+
+  /* ===== メールで送る =====
+     ブラウザからメールを自動送信することはできない。共有（Web Share）で渡せるのは
+     件名・本文・添付ファイルまでで、宛先は渡せない。そこでボタンを押した時点で宛先をコピーし、
+     Gmail の宛先欄に貼ってもらう。
+     共有でファイルを渡せない環境（PC など）では、CSV を保存してから宛先入りでメールアプリを開く（添付は手で）。
+     送るのはレジで選んでいる営業日の会計だけ（同梱の過去実績は除く）。 */
+  function mailAddr(){
+    try{ const v=localStorage.getItem(MLSTORE); return v===null ? MAIL_DEFAULT : v; }catch(e){ return MAIL_DEFAULT; }
+  }
+  const mailIn=document.getElementById("mailTo");
+  function drawMail(){ mailIn.value=mailAddr(); }
+  mailIn.addEventListener("change", ()=>{
+    const v=mailIn.value.trim(); mailIn.value=v;
+    if(v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)){ showToast("⚠️ メールアドレスの形が正しくありません",2200,true); return; }
+    try{ localStorage.setItem(MLSTORE, v); showToast(v ? "送付先を保存しました" : "送付先を空にしました",1400); }
+    catch(e){ showToast("⚠️ 送付先を保存できませんでした",3000,true); }
+  });
+  /* 共有はボタンを押した直後でないと開けないので、await を挟まずに同期でコピーする */
+  function copyText(s){
+    let ok=false;
+    try{
+      const ta=document.createElement("textarea"); ta.value=s;
+      ta.style.cssText="position:fixed;left:-9999px;top:0;opacity:0";
+      document.body.appendChild(ta); ta.focus(); ta.select(); ta.setSelectionRange(0,s.length);
+      ok=document.execCommand("copy"); ta.remove();
+    }catch(e){}
+    if(!ok){ try{ if(navigator.clipboard){ navigator.clipboard.writeText(s); ok=true; } }catch(e){} }
+    return ok;
+  }
+  function mailReport(day, list){
+    const evs=[]; list.forEach(t=>{ const e=t.event||""; if(e && !evs.includes(e)) evs.push(e); });
+    const dt=new Date(day+"T00:00:00");
+    const md=(dt.getMonth()+1)+"月"+dt.getDate()+"日";
+    const ymd=dt.getFullYear()+"年"+md+"（"+"日月火水木金土"[dt.getDay()]+"）";
+    const subject=md+" "+(evs.length ? evs.join("・")+" " : "")+"売上報告";
+    const sum=(a,f)=>a.reduce((s,x)=>s+f(x),0);
+    const total=sum(list,t=>t.total), gross=sum(list,t=>t.subtotal!=null?t.subtotal:t.total);
+    const qty=sum(list,t=>sum(t.items,i=>i.count));
+    const times=list.map(t=>t.time).filter(Boolean).sort();
+    const items={};
+    list.forEach(t=>t.items.forEach(i=>{
+      const o=items[i.name]||(items[i.name]={q:0,a:0});
+      o.q+=i.count; o.a+=(i.unit!=null?i.unit:i.price)*i.count;
+    }));
+    const L=[];
+    L.push("お疲れさまです。売上の報告です。","");
+    L.push("日付：　　"+ymd);
+    L.push("イベント："+(evs.length ? evs.join("・") : "（名前なし）"));
+    L.push("会計：　　"+list.length+"件");
+    L.push("販売数：　"+qty+"点");
+    L.push("売上：　　"+yen(total));
+    if(gross>total) L.push("値引き：　"+yen(gross-total)+"（値引き前 "+yen(gross)+"）");
+    if(times.length) L.push("時間：　　"+times[0]+"〜"+times[times.length-1]+"（最初と最後の会計）");
+    if(evs.length>1){
+      L.push("","■ イベント別");
+      evs.forEach(e=>{ const a=list.filter(t=>t.event===e); L.push("・"+e+"　"+a.length+"件　"+yen(sum(a,t=>t.total))); });
+    }
+    L.push("","■ 品目別（売上の多い順）");
+    Object.keys(items).sort((a,b)=>items[b].a-items[a].a)
+      .forEach(n=>L.push("・"+n+"　"+items[n].q+"点　"+yen(items[n].a)));
+    const fname="売上_"+day+(evs.length ? "_"+evs.join("・") : "")
+      .replace(/[\\/:*?"<>|\s]/g,"")+".csv";
+    L.push("","明細は添付のCSV（"+fname+"）をご覧ください。","","屋台レジ v"+APP_VERSION);
+    return {subject, body:L.join("\n"), fname};
+  }
+  /* 送り終えたら書き出し済みにする。ただし他の日に未書き出しが残っていれば、印は付けない
+     （付けると、その日の分まで書き出し済み扱いになり、全消去できてしまう） */
+  function afterMail(day){
+    const others=unexported().filter(t=>t.date!==day);
+    if(!others.length){ markExported(); return ""; }
+    return "他の日に未書き出しの会計が "+others.length+"件 あります。CSVでも書き出してください";
+  }
+  function sendMail(){
+    const to=mailAddr();
+    if(!to){
+      alert("送付先のメールアドレスが入っていません。\n設定 →「✉ 売上の送付先」で入れてください。");
+      document.querySelector('.tab[data-tab="settings"]').click();
+      const s=document.getElementById("sectMail"); s.open=true; s.scrollIntoView({block:"nearest"});
+      mailIn.focus(); return;
+    }
+    const day=bd.value;
+    const list=txns.filter(t=>!t.pre && t.date===day);
+    if(!list.length){ showToast("レジで選んでいる営業日（"+day+"）の会計がありません",2200); return; }
+    const r=mailReport(day, list);
+    const csv="﻿"+buildCSV(list);
+    const copied=copyText(to);
+    let file=null;
+    try{ file=new File([csv], r.fname, {type:"text/csv"}); }catch(e){}
+    if(file && navigator.canShare && navigator.canShare({files:[file]})){
+      showToast(copied ? "宛先（"+to+"）をコピーしました。Gmail を選び、宛先欄に貼り付けて送信してください"
+                       : "Gmail を選び、宛先に "+to+" を入れて送信してください", 6000);
+      navigator.share({files:[file], title:r.subject, text:r.body})
+        .then(()=>{ const w=afterMail(day); showToast(w || "メールの送信まで済ませてください（書き出し済みにしました）", w?4000:2400, !!w); })
+        .catch(e=>{ if(e && e.name==="AbortError") return; mailFallback(to, r, csv, day); });
+      return;
+    }
+    mailFallback(to, r, csv, day);
+  }
+  /* 共有が使えないとき：CSVを保存し、宛先・件名・本文入りでメールアプリを開く */
+  function mailFallback(to, r, csv, day){
+    const url=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+    const a=document.createElement("a"); a.href=url; a.download=r.fname;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    const body=r.body+"\n\n※CSV（"+r.fname+"）はダウンロードフォルダに保存しました。このメールに添付してください。";
+    const m=document.createElement("a");
+    m.href="mailto:"+to+"?subject="+encodeURIComponent(r.subject)+"&body="+encodeURIComponent(body);
+    setTimeout(()=>{ document.body.appendChild(m); m.click(); m.remove(); }, 400);
+    const w=afterMail(day);
+    showToast(w || "CSVを保存しました。開いたメールに添付して送信してください", 4500, !!w);
+  }
+  document.getElementById("mailBtn").addEventListener("click", sendMail);
 
   /* ===== 売上：時間帯グラフ =====
      範囲は2通り：
@@ -2179,6 +2312,7 @@
       // 開いたまま他タブへ行って戻った場合も、最新の値引き状態で描き直す
       if(document.getElementById("sectDisc").open) resetDraft();
       if(document.getElementById("sectView").open){ drawViewPick(); drawSubPick(); drawThemePick(); }
+      if(document.getElementById("sectMail").open) drawMail();
       if(document.getElementById("sectPast").open) drawPastInfo();
     }
     // レジに戻ったときは必ず商品ページから始める（電卓のまま戻らない）

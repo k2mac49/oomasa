@@ -55,12 +55,21 @@ const js = "const PAST_DATA = {"
    ここでは index.html に差し込んだ「ローカル専用ビルド」を作る。
    出力先は .gitignore 済み。タブレットにはこのファイルを渡す。 */
 const DIR="C:/DATA/Development/oomasa/regi/";
+/* ローカル版だけの設定。メールアドレスなど公開したくない値を置く（.gitignore 済み） */
+const LOCAL = fs.existsSync(DIR+"local.json") ? JSON.parse(fs.readFileSync(DIR+"local.json","utf8")) : {};
 for(const [src,out] of [["index.html","index-local.html"],["regi-offline.html","regi-offline-local.html"]]){
   if(!fs.existsSync(DIR+src)) continue;
   let h=fs.readFileSync(DIR+src,"utf8");
   const m=h.match(/const PAST_DATA = \{[\s\S]*?\};[^\r\n]*/);
   if(!m){ console.log("  (スキップ) "+src+" に PAST_DATA が無い"); continue; }
-  fs.writeFileSync(DIR+out, h.replace(m[0], js), "utf8");
+  h=h.replace(m[0], js);
+  // 送付先メールの既定（local.json。.gitignore 済み）
+  if(LOCAL.mail){
+    const before=h;
+    h=h.replace(/const MAIL_DEFAULT = "[^"]*";/, "const MAIL_DEFAULT = "+JSON.stringify(LOCAL.mail)+";");
+    console.log("  "+(h!==before ? "送付先の既定: "+LOCAL.mail : "(注意) MAIL_DEFAULT が見つからない")+"  → "+out);
+  }
+  fs.writeFileSync(DIR+out, h, "utf8");
   console.log("  生成: "+out+"  "+(fs.statSync(DIR+out).size/1024).toFixed(1)+" KB");
 }
 

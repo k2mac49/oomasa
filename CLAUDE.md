@@ -47,6 +47,8 @@ grep -o 'APP_VERSION = "[0-9.]*"' index.html
   `node gen-past.js` で `index-local.html` と `regi-offline-local.html` を生成する
   （どちらも .gitignore 済み）。タブレットにはこのローカル版を渡す。
   入力CSVは手元にしか無いので、作り直すときは当時のCSVを用意すること
+- `local.json` … ローカル版だけに入れる設定（.gitignore 済み）。`{"mail":"送付先"}`。
+  gen-past.js がローカル版の `MAIL_DEFAULT` に差し込む。**メールアドレスは公開リポジトリに入れない。**
 - `index.html` … UI・ロジック・CSS をすべて内包した単一ファイル
 - `sw.js` … Service Worker（HTMLはネット優先、2.5秒でキャッシュに切替）
 - `manifest.json` / アイコン類
@@ -66,9 +68,15 @@ grep -o 'APP_VERSION = "[0-9.]*"' index.html
   3. `仕様書.md` の版数行と「10. 変更履歴」
   4. `README.md`（機能一覧・現行キャッシュ名）
 
-## 現在の状態（v1.27 / regi-cache-v37）
+## 現在の状態（v1.28 / regi-cache-v38）
 
 ### 売上画面
+- **✉ メールで送る**（v1.28）。レジで選んでいる営業日の会計（`pre` 除く）をCSV添付で共有に渡す。
+  件名「〇月〇日 イベント名 売上報告」、本文は集計（件数・点数・売上・値引き・時間・品目別）。
+  Web Share は宛先を渡せないので、押した時点で宛先をクリップボードへ（await を挟むと共有が開けなくなるので同期コピー）。
+  共有でファイルを渡せない環境は、CSVを保存して mailto（宛先・件名・本文入り）を開く。
+  他の日に未書き出しが残っているときは書き出し済みの印を付けない（全消去の守りを崩さないため）。
+  送付先は設定「✉ 売上の送付先」（`regmock_mail_v1`）。未設定なら `MAIL_DEFAULT`（公開版は空）。
 - **未書き出しがあるうちは全消去できない**（v1.21）。確認ダイアログではなく拒否。
   ボタンは「全消去（要書き出し）」と淡色になり、押すと理由を出して書き出しボタンを光らせる。
   2026-09-20 三沢で、iPhone側の売上がスクショだけ残して消された事故への対策。
@@ -130,7 +138,7 @@ grep -o 'APP_VERSION = "[0-9.]*"' index.html
 ## localStorage キー（表示の変更では絶対に触らない）
 `regmock_txns_v2`（会計履歴）／`regmock_prods_v2`（商品マスタ）／`regmock_disc_v3`（値引き）／
 `regmock_events_v1`（営業日ごとのイベント）／`regmock_view_v1`／`regmock_anl_v1`／
-`regmock_fold_v1`（売上詳細の開閉）／`regmock_backup_v1`／`regmock_migrations`
+`regmock_fold_v1`（売上詳細の開閉）／`regmock_backup_v1`／`regmock_migrations`／`regmock_mail_v1`（送付先）
 
 **見せ方だけを変える改修では、これらに触れない。** 触らない限り履歴はそのまま残る。
 変更前後で会計件数が変わらないことを実際に確かめてから出すこと。

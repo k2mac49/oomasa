@@ -4,3 +4,6 @@ index-local.html
 regi-offline-local.html
 past-data.js
 *.csv
+
+# ローカル版だけに入れる設定（送付先メールアドレスなど）。公開しない。
+local.json
