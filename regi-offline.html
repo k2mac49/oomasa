@@ -1,6 +1,6 @@
 <!-- このファイルは build-offline.js が index.html から自動生成したものです。
      直接編集しないでください。直すときは index.html を直して node build-offline.js を実行。
-     生成元: v1.26 -->
+     生成元: v1.27 -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -255,16 +255,14 @@
     body[data-view="card"] .ctrl .count{min-width:32px; font-size:22px;}
   }
 
-  /* 設定：表示の切り替え・テストデータ */
+  /* 設定：表示の切り替え */
   .pickh{font-size:13px; font-weight:800; color:var(--sub); margin:16px 0 6px;}
   .pick{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;}
-  .pick button,.testact button{height:50px; border:1px solid var(--line); background:var(--bg); color:var(--txt);
+  .pick button,.sectact button{height:50px; border:1px solid var(--line); background:var(--bg); color:var(--txt);
     border-radius:11px; font-size:15px; font-weight:800; cursor:pointer; font-family:inherit;}
   .pick button.on{background:var(--accent2); border-color:var(--accent2); color:var(--on-accent);}
-  .testact{display:grid; grid-template-columns:1fr 1fr 0.8fr; gap:8px; margin-bottom:8px;}
-  .testact .add{background:var(--blue); border-color:var(--blue); color:var(--on-accent);}
-  .testact .del{color:var(--warn); border-color:var(--warn);}
-  .testinfo{font-size:13px; color:var(--sub);}
+  .sectact{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;}
+  .sectact .add{background:var(--blue); border-color:var(--blue); color:var(--on-accent);}
 
   /* ===== 売上：時間帯グラフ ===== */
   .anl{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px; flex-shrink:0;
@@ -687,7 +685,7 @@
       <summary>📚 過去の実績</summary>
       <div class="sectbody">
         <div id="pastInfo" class="note"></div>
-        <div class="testact">
+        <div class="sectact">
           <button type="button" class="add" id="pastAdd">読み込む</button>
           <button type="button" id="pastDel">削除</button>
         </div>
@@ -696,28 +694,11 @@
       </div>
     </details>
 
-    <details class="sect" id="sectTest">
-      <summary>🧪 テストデータ</summary>
-      <div class="sectbody">
-        <p class="note">グラフや分析の検討用に、架空の売上を入れます。1日分は <b>2026年1月1日 8:00〜15:00</b>（241会計）。
-          3日分は、それに 1/2（9:00〜14:30）と 1/3（10:00〜15:00）を加えます（イベント全体・1日平均の確認用）。
-          イベント名は「テストデータ」。売上一覧・総売上・CSVには出ますが、「未書き出し」の件数には数えません。
-          下の「削除」でテストデータだけをまとめて消せます（本物の会計には触りません）。</p>
-        <div class="testact">
-          <button type="button" class="add" id="testAdd">1日分（1/1）</button>
-          <button type="button" class="add" id="testAdd3">3日分（1/1〜1/3）</button>
-          <button type="button" class="del" id="testDel">削除</button>
-        </div>
-        <div class="testinfo" id="testInfo"></div>
-      </div>
-    </details>
-
     <div class="appinfo">
       <div class="nm">屋台レジ <span id="appVer"></span></div>
       <div class="co">RazyLab</div>
     </div>
   </div>
-
 
   <div class="toast" id="toast"></div>
 
@@ -751,7 +732,7 @@
     {id:"p10",name:"サワー",         price:500, on:true},
     {id:"p9", name:"クラフトビール", price:600, on:true},
   ];
-  const APP_VERSION = "1.26 オフライン版";          // 画面下部に表示。仕様書の版数と揃える
+  const APP_VERSION = "1.27 オフライン版";          // 画面下部に表示。仕様書の版数と揃える
   const STORE  = "regmock_txns_v2";   // 会計履歴（形式は従来どおり）
   const DSTORE = "regmock_disc_v3";   // 値引き（商品IDキー）
   // v2：初期メニューを9品に入れ替えたため、キーを上げて新しい既定を配る。
@@ -829,7 +810,7 @@
   /* ===== 消えたとき取り返しがつかないので、書き出し状況を必ず見せる ===== */
   let backup = (function(){ try{ return JSON.parse(localStorage.getItem(BSTORE))||{}; }catch(e){ return {}; } })();
   function saveBackup(){ try{ localStorage.setItem(BSTORE, JSON.stringify(backup)); return true; }catch(e){ return false; } }
-  function unexported(){ const m=backup.lastExportMaxId||0; return txns.filter(t=>!t.test && !t.pre && (t.id||0)>m); }
+  function unexported(){ const m=backup.lastExportMaxId||0; return txns.filter(t=>!t.pre && (t.id||0)>m); }
   /* 次の会計No。書き出し済みの最大Noより必ず大きくする。
      （最後の会計を消したあとに同じNoが再利用され、「書き出し済み」と誤判定されるのを防ぐ） */
   function nextId(){ return Math.max(txns.reduce((m,t)=>Math.max(m,t.id||0),0), backup.lastExportMaxId||0) + 1; }
@@ -875,7 +856,15 @@
       + `<span class="sub2 ${persistNg?"ng":""}">${esc(persistTxt)}</span>`;
   }
 
-  function loadTxns(){ try{ return JSON.parse(localStorage.getItem(STORE))||[]; }catch(e){ return []; } }
+  /* v1.27 でテストデータ機能を廃止した。以前に入れたテスト用の会計が端末に残っていれば、
+     ここで取り除いて書き戻す（本物の会計には触らない）。 */
+  function loadTxns(){ try{
+    const a=JSON.parse(localStorage.getItem(STORE))||[];
+    if(!Array.isArray(a)) return [];
+    const b=a.filter(t=>!(t&&t.test));
+    if(b.length!==a.length){ try{ localStorage.setItem(STORE, JSON.stringify(b)); }catch(e){} }
+    return b;
+  }catch(e){ return []; } }
   function saveTxns(){
     try{ localStorage.setItem(STORE, JSON.stringify(txns)); return true; }
     catch(e){ showToast("⚠️ 売上を保存できませんでした。今すぐCSVで書き出してください", 6000, true); return false; }
@@ -1182,7 +1171,7 @@
     document.getElementById("discSum").textContent = anyDisc() ? ("値引き中 "+discCount()+"品") : "";
     document.getElementById("resetCart").disabled = !any && received===0;
     // 当日の客数。テストデータは実績ではないので数えない
-    const todays = txns.filter(t=>!t.test && !t.pre && t.date===bd.value).length;
+    const todays = txns.filter(t=>!t.pre && t.date===bd.value).length;
     document.getElementById("custs").innerHTML =
       '<span class="i">👤</span>'+todays+'<span class="u">人</span>';
 
@@ -1368,7 +1357,6 @@
     sectProd: ()=>renderEdit(),
     sectView: ()=>{ drawViewPick(); drawSubPick(); drawThemePick(); },
     sectPast: ()=>drawPastInfo(),
-    sectTest: ()=>drawTestInfo(),
   };
   document.querySelectorAll("#pageSettings details.sect").forEach(sect=>{
     sect.addEventListener("toggle", ()=>{
@@ -1380,7 +1368,7 @@
   });
 
   /* ===== 過去の実績の読み込み =====
-     実際に売った記録なので test とは別扱いにする（pre フラグ）。
+     実際に売った記録だが、当日の集計には混ぜない（pre フラグ）。
      ただし「当日の客数」「未書き出し」には混ぜない。過去の日付のものだから。 */
   function pastDays(){
     return PAST_DATA.d.map(d=>{
@@ -2075,102 +2063,6 @@
   });
   let anlRz; window.addEventListener("resize", ()=>{ clearTimeout(anlRz); anlRz=setTimeout(drawAnl,150); });
 
-  /* ===== テストデータ =====
-     1日分：2026-01-01 8:00〜15:00（従来どおり・同じ内容）
-     3日分：上記＋1/2（9:00〜14:30・やや少なめ）＋1/3（10:00〜15:00・少なめ）。イベント全体・1日平均の確認用。
-     毎回同じ内容になるよう、乱数は種を固定。会計には test:true を付け、まとめて削除できるようにする。
-     1/1の想定：元日の初詣客。昼に山、13時台に谷、14時前に2つ目の山。10:40と13:50に団体（ムラ）。
-     仕掛け（1/1のみ）：焼きうどん13:20品切れ／14:15から からあげ −100円。 */
-  const TEST_EV="テストデータ";
-  const TEST_DAYS=[
-    {date:"2026-01-01", seed:1,  from:480, to:900, scale:1.0,  special:true},
-    {date:"2026-01-02", seed:2,  from:540, to:870, scale:0.8,  special:false},
-    {date:"2026-01-03", seed:3,  from:600, to:900, scale:0.65, special:false},
-  ];
-  function makeTestTxns(o, startId){
-    let seed=o.seed;
-    const rnd=()=>{ seed|=0; seed=seed+0x6D2B79F5|0; let t=Math.imul(seed^seed>>>15,1|seed);
-      t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; };
-    const poisson=l=>{ const L=Math.exp(-l); let k=0,p=1; do{ k++; p*=rnd(); }while(p>L); return k-1; };
-    const M=[["焼きうどん",600,1.0],["豚バラ串",500,0.9],["あげたこ焼き",600,0.8],["メンチカツ",400,0.6],
-             ["からあげ",600,1.0],["じゃじゃ麺",600,0.7],["フランクフルト",300,0.8],
-             ["ビール",500,0.5],["サワー",500,0.35],["クラフトビール",600,0.3]];
-    const ALC=new Set(["ビール","サワー","クラフトビール"]);
-    const curve=[[480,.15],[540,.3],[600,.45],[660,.65],[700,.85],[730,.95],[760,.9],[780,.6],
-                 [800,.5],[820,.65],[845,.72],[870,.45],[900,.25]];
-    const lam=m=>{ for(let i=1;i<curve.length;i++){ const [a,va]=curve[i-1],[b,vb]=curve[i];
-      if(m<=b) return va+(vb-va)*(m-a)/(b-a); } return .2; };
-    const blk={}; for(let b=480;b<900;b+=10) blk[b]=0.75+rnd()*0.5;      // 10分ごとのムラ（±25%）
-    const out=[]; let id=startId;
-    for(let m=o.from;m<o.to;m++){
-      let l=lam(m)*blk[Math.floor(m/10)*10]*o.scale;
-      if(o.special){
-        if(m>=640&&m<650) l+=1.2;           // 10:40 団体
-        if(m>=830&&m<838) l+=0.9;           // 13:50 団体
-        if(m>=770&&m<780) l*=0.35;          // 12:50 仕込み待ちで一時停滞
-      }
-      const k=poisson(l);
-      for(let c=0;c<k;c++){
-        const w=M.map(([n,,b])=>{
-          let x=b;
-          if(o.special&&n==="焼きうどん"&&m>=800) return 0;                // 13:20 品切れ
-          if((n==="焼きうどん"||n==="じゃじゃ麺")&&m>=660&&m<810) x*=1.8; // 昼
-          if(n==="フランクフルト"&&m<600) x*=1.6;
-          if(ALC.has(n)) x*= m<600?0.3 : m<780?1.4 : 2.0;
-          if(n==="あげたこ焼き"&&m>=780) x*=1.4;
-          return x;
-        });
-        const r=rnd(), kinds = r<.55?1 : r<.87?2 : 3, picked=[];
-        for(let j=0;j<kinds;j++){
-          const tot=w.reduce((a,b,ix)=>a+(picked.includes(ix)?0:b),0); if(tot<=0) break;
-          let x=rnd()*tot, ix=0;
-          for(;ix<w.length;ix++){ if(picked.includes(ix)) continue; x-=w[ix]; if(x<=0) break; }
-          picked.push(Math.min(ix,w.length-1));
-        }
-        const items=picked.map(ix=>{
-          const [name,price]=M[ix], q=rnd();
-          const count = ALC.has(name) ? (q<.75?1:2) : (q<.7?1 : q<.92?2 : 3);
-          const unit = (o.special&&name==="からあげ"&&m>=855) ? price-100 : price;    // 14:15〜 値引き
-          return {name,price,count,unit};
-        });
-        const gross=items.reduce((s,it)=>s+it.price*it.count,0), net=items.reduce((s,it)=>s+it.unit*it.count,0);
-        const q=rnd();
-        const received = q<.3 ? net : q<.8 ? Math.ceil(net/1000)*1000 : (net<=5000?(q<.93?5000:10000):10000);
-        out.push({id:id++, date:o.date, event:TEST_EV, time:hhmm(m).padStart(5,"0"), items,
-          subtotal:gross, discount:gross-net, total:net, received, change:received-net, test:true});
-      }
-    }
-    return out;
-  }
-  function drawTestInfo(){
-    const t=txns.filter(x=>x.test), ds=new Set(t.map(x=>x.date)).size;
-    document.getElementById("testInfo").textContent = t.length
-      ? `いま入っているテストデータ：${ds}日分 ${t.length}件 ／ ${yen(t.reduce((s,x)=>s+x.total,0))}`
-      : "テストデータは入っていません";
-    document.getElementById("testDel").disabled = !t.length;
-  }
-  function addTest(nDays){
-    if(txns.some(t=>t.test) && !confirm("テストデータはすでに入っています。入れ直しますか？")) return;
-    txns=txns.filter(t=>!t.test);
-    let id=nextId(), add=[];
-    TEST_DAYS.slice(0,nDays).forEach(o=>{ const a=makeTestTxns(o,id); id+=a.length; add=add.concat(a); });
-    txns=txns.concat(add);
-    const ok=saveTxns();
-    anl.date=TEST_DAYS[0].date; anl.ev="*"; anl.evAll=TEST_EV; anl.sel=-1;
-    anl.scope = nDays>1 ? "event" : "day";
-    renderSales(); drawTestInfo();
-    if(ok) showToast(`テストデータ ${nDays}日分 ${add.length}件 を入れました（売上タブのグラフで確認）`,2200);
-  }
-  document.getElementById("testAdd").addEventListener("click", ()=>addTest(1));
-  document.getElementById("testAdd3").addEventListener("click", ()=>addTest(3));
-  document.getElementById("testDel").addEventListener("click", ()=>{
-    const n=txns.filter(t=>t.test).length; if(!n) return;
-    if(!confirm(`テストデータ ${n}件 を削除します。本物の会計はそのまま残ります。`)) return;
-    txns=txns.filter(t=>!t.test);
-    const ok=saveTxns(); renderSales(); drawTestInfo(); render();
-    if(ok) showToast("テストデータを削除しました",1500);
-  });
-
   /* 「品目別」「会計履歴」の開閉。会計を1件消すたびに一覧を作り直すので、
      覚えておかないと開いていた場所が閉じてしまう。
      既定は 品目別＝開く／会計履歴＝閉じる（履歴は件数が多く、畳んだほうが見通しがよいため）。 */
@@ -2305,7 +2197,6 @@
       // 開いたまま他タブへ行って戻った場合も、最新の値引き状態で描き直す
       if(document.getElementById("sectDisc").open) resetDraft();
       if(document.getElementById("sectView").open){ drawViewPick(); drawSubPick(); drawThemePick(); }
-      if(document.getElementById("sectTest").open) drawTestInfo();
       if(document.getElementById("sectPast").open) drawPastInfo();
     }
     // レジに戻ったときは必ず商品ページから始める（電卓のまま戻らない）
